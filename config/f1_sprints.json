@@ -1,0 +1,13 @@
+{
+    "description": "F1 Sprint Race rounds by season - these rounds have no FP2/FP3",
+    "seasons": {
+        "2025": {
+            "sprint_rounds": [2, 5, 13, 20, 21, 23],
+            "notes": "China, Miami, Belgium, Austin, Brazil, Qatar"
+        },
+        "2026": {
+            "sprint_rounds": [2, 6, 11, 13, 16, 19],
+            "notes": "China, Miami, Silverstone, Montreal, Zandvoort, Singapore"
+        }
+    }
+}
