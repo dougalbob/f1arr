@@ -73,7 +73,8 @@ PLEX_TOKEN = get_env("PLEX_TOKEN", required=True)
 PLEX_LIBRARY = 'Motorsport - F1'  #NEW
 
 # Library path
-F1_BASE_PATH = '/data/media/Motorssport/F1'
+from f1_common import F1_LIBRARY_PATH
+F1_BASE_PATH = F1_LIBRARY_PATH
 
 # Config directory (relative to script location)
 CONFIG_DIR = SCRIPT_DIR / "config"
