@@ -112,7 +112,7 @@ VENUE_COUNTRY_MAP = {
 }
 
 MAX_RETRIES = 6
-RETRY_DELAY = 10
+RETRY_DELAY = 20
 
 _plex_connection = None
 
