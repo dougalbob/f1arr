@@ -43,7 +43,7 @@ from f1_common import (
 PYTHON_PATH = "/opt/venv/bin/python3"
 GRABBER_SCRIPT = SCRIPT_DIR / "f1_grabber.py"
 OVERLAY_SCRIPT = SCRIPT_DIR / "f1_overlay_utility.py"
-CONFIG_DIR = SCRIPT_DIR / "config"
+CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/config"))
 CONFIG_FILE = CONFIG_DIR / "webui_settings.json"
 
 # Available seasons
