@@ -23,7 +23,7 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime, timedelta
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, send_from_directory
 from utils import config
 
 # Add paths for imports
@@ -441,6 +441,11 @@ HTML_TEMPLATE = """
 <head>
     <title>F1 Grabber</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#e10600">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/static/f1_icon.png">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -1745,6 +1750,30 @@ def test_connections():
         results["errors"].append(f"Plex: {str(e)}")
     
     return jsonify(results)
+
+@app.route("/manifest.json")
+def manifest():
+    return jsonify({
+        "name": "F1arr",
+        "short_name": "F1arr",
+        "description": "F1 Automated Recording & Retrieval",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#000000",
+        "theme_color": "#e10600",
+        "icons": [
+            {
+                "src": "/static/f1_icon.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            }
+        ]
+    })
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory(SCRIPT_DIR / "assets", filename)
 
 
 if __name__ == "__main__":
