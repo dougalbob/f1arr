@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 LABEL org.opencontainers.image.source="https://github.com/dougalbob/f1arr"
 LABEL org.opencontainers.image.description="F1 Automated Recording & Retrieval - Grabs and organizes F1 sessions for Plex"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.version="1.1.0"
 
 # Set timezone
 ENV TZ=Europe/London
@@ -29,9 +29,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
     python-dotenv \
     plexapi \
     python-dateutil \
-    flask
+    flask \
     pyyaml
-    
+
 # Create app directory structure
 WORKDIR /app
 RUN mkdir -p /app/config_defaults /app/assets /app/utils
@@ -62,8 +62,6 @@ RUN chmod +x /app/entrypoint.sh
 
 # Environment defaults (user SHOULD override these)
 ENV PYTHONUNBUFFERED=1
-ENV F1_LIBRARY_PATH=/media/F1
-ENV F1_DOWNLOADS_PATH=/downloads/complete/f1
 ENV CONFIG_DIR=/config
 
 # Expose WebUI port
