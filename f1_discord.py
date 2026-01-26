@@ -28,21 +28,17 @@ from typing import Optional, List
 
 # Add script directory to path
 SCRIPT_DIR = Path(__file__).parent.resolve()
-SCRIPT_DIR = Path(__file__).parent.resolve()
-sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from utils import load_env, get_env
-
-# Load environment variables
-load_env()
+# Import from f1_common (which uses config loader)
+from f1_common import get_discord_webhook
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-# Discord Webhook URL - Set in .env file
-DISCORD_WEBHOOK_URL = get_env("DISCORD_F1_WEBHOOK", default="")
+# Discord Webhook URL - from settings.yml or environment
+DISCORD_WEBHOOK_URL = get_discord_webhook() or ""
 
 # =============================================================================
 # NOTIFICATION SETTINGS

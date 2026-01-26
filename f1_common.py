@@ -4,7 +4,7 @@ F1 Common - Shared constants, patterns, and utilities
 ======================================================
 
 Self-contained version for f1arr container.
-Paths are configured via environment variables.
+Configuration loaded from settings.yml or environment variables.
 """
 
 import os
@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 
 # =============================================================================
-# PATH CONFIGURATION (Environment-based for container)
+# PATH CONFIGURATION
 # =============================================================================
 
 def get_script_dir() -> Path:
@@ -27,25 +27,92 @@ def get_script_dir() -> Path:
 
 def get_config_dir() -> Path:
     """Get the config directory path."""
-    # Check environment variable first, then fall back to script dir
     env_config = os.environ.get("CONFIG_DIR")
     if env_config:
         return Path(env_config)
     return get_script_dir() / "config"
 
-def get_library_path() -> str:
-    """Get F1 library path from environment or default."""
-    return os.environ.get("F1_LIBRARY_PATH", "/data/media/Motorsport/F1")
+# Try to use config loader, fall back to environment variables
+try:
+    from utils import config as _config
+    _USE_CONFIG_LOADER = True
+    
+    def get_library_path() -> str:
+        return _config.get_f1_library_path()
+    
+    def get_downloads_path() -> str:
+        return _config.get_downloads_path()
+    
+    def get_plex_library_id() -> Optional[str]:
+        return _config.get_plex_library_id()
+    
+    def get_plex_library_name() -> str:
+        return _config.get_plex_library_name()
+    
+    def get_plex_url() -> Optional[str]:
+        return _config.get_plex_url()
+    
+    def get_plex_token() -> Optional[str]:
+        return _config.get_plex_token()
+    
+    def get_prowlarr_url() -> Optional[str]:
+        return _config.get_prowlarr_url()
+    
+    def get_prowlarr_api_key() -> Optional[str]:
+        return _config.get_prowlarr_api_key()
+    
+    def get_sabnzbd_url() -> Optional[str]:
+        return _config.get_sabnzbd_url()
+    
+    def get_sabnzbd_api_key() -> Optional[str]:
+        return _config.get_sabnzbd_api_key()
+    
+    def get_discord_webhook() -> Optional[str]:
+        return _config.get_discord_webhook()
 
-def get_downloads_path() -> str:
-    """Get F1 downloads path from environment or default."""
-    return os.environ.get("F1_DOWNLOADS_PATH", "/data/downloads/complete/f1")
+except ImportError:
+    _USE_CONFIG_LOADER = False
+    
+    def get_library_path() -> str:
+        return os.environ.get("F1_LIBRARY_PATH", "/media/F1")
+    
+    def get_downloads_path() -> str:
+        return os.environ.get("F1_DOWNLOADS_PATH", "/downloads/complete/f1")
+    
+    def get_plex_library_id() -> Optional[str]:
+        return os.environ.get("PLEX_LIBRARY_ID")
+    
+    def get_plex_library_name() -> str:
+        return os.environ.get("PLEX_LIBRARY", "Motorsport - F1")
+    
+    def get_plex_url() -> Optional[str]:
+        return os.environ.get("PLEX_URL")
+    
+    def get_plex_token() -> Optional[str]:
+        return os.environ.get("PLEX_TOKEN")
+    
+    def get_prowlarr_url() -> Optional[str]:
+        return os.environ.get("PROWLARR_URL")
+    
+    def get_prowlarr_api_key() -> Optional[str]:
+        return os.environ.get("PROWLARR_API_KEY")
+    
+    def get_sabnzbd_url() -> Optional[str]:
+        return os.environ.get("SABNZBD_URL")
+    
+    def get_sabnzbd_api_key() -> Optional[str]:
+        return os.environ.get("SABNZBD_API_KEY")
+    
+    def get_discord_webhook() -> Optional[str]:
+        return os.environ.get("DISCORD_WEBHOOK_URL")
 
 # Export commonly used paths
 SCRIPT_DIR = get_script_dir()
 CONFIG_DIR = get_config_dir()
 F1_LIBRARY_PATH = get_library_path()
 F1_DOWNLOADS_PATH = get_downloads_path()
+PLEX_LIBRARY_ID = get_plex_library_id()
+PLEX_LIBRARY_NAME = get_plex_library_name()
 
 # =============================================================================
 # SESSION DEFINITIONS (Single Source of Truth)
@@ -470,6 +537,9 @@ def filter_releases(
 
 
 if __name__ == "__main__":
+    print("=== F1 Common Configuration ===")
+    print(f"Config Loader: {'Yes' if _USE_CONFIG_LOADER else 'No (fallback)'}")
+    print(f"Config Dir: {CONFIG_DIR}")
     print(f"F1 Library Path: {F1_LIBRARY_PATH}")
     print(f"F1 Downloads Path: {F1_DOWNLOADS_PATH}")
-    print(f"Config Dir: {CONFIG_DIR}")
+    print(f"Plex Library: {PLEX_LIBRARY_NAME} (ID: {PLEX_LIBRARY_ID})")

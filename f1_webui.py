@@ -27,8 +27,6 @@ from flask import Flask, render_template_string, request, jsonify
 
 # Add paths for imports
 SCRIPT_DIR = Path(__file__).parent.resolve()
-# Container: scripts are in /app
-sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from f1_common import (
@@ -37,13 +35,14 @@ from f1_common import (
     load_calendar,
     get_round_by_number,
     F1_LIBRARY_PATH,
+    get_config_dir,
 )
 
 # Configuration
 PYTHON_PATH = "/opt/venv/bin/python3"
 GRABBER_SCRIPT = SCRIPT_DIR / "f1_grabber.py"
 OVERLAY_SCRIPT = SCRIPT_DIR / "f1_overlay_utility.py"
-CONFIG_DIR = Path(os.environ.get("CONFIG_DIR", "/config"))
+CONFIG_DIR = get_config_dir()
 CONFIG_FILE = CONFIG_DIR / "webui_settings.json"
 
 # Available seasons

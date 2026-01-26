@@ -207,13 +207,11 @@ from urllib.parse import urlparse
 from typing import Dict, List, Optional, Tuple, Set
 import logging
 
-# Add pythonscripts to path for shared utilities
+# Add script directory to path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from utils import load_env, get_env
-
-# Import shared F1 module
+# Import shared F1 module (which uses config loader)
 from f1_common import (
     SessionType,
     SESSION_DISPLAY_NAMES,
@@ -233,53 +231,39 @@ from f1_common import (
     filter_releases,
     extract_quality,
     extract_release_group,
-    get_valid_sessions_for_round,  # Add this
-    is_sprint_weekend,              # Add this (optional, for display)
+    get_valid_sessions_for_round,
+    is_sprint_weekend,
+    get_config_dir,
+    F1_LIBRARY_PATH,
+    get_prowlarr_url,
+    get_prowlarr_api_key,
+    get_sabnzbd_url,
+    get_sabnzbd_api_key,
 )
-
-# Load environment variables
-load_env()
 
 #===============================================================================
 # CONFIGURATION
 #===============================================================================
 
-# --- Path Configuration ---
-def resolve_base_path():
-    """Resolve base path for Docker vs direct execution."""
-    if os.path.exists("/data"):
-        return "/data"
-    elif os.path.exists("/mnt/user"):
-        return "/mnt/user/data"
-    else:
-        return os.path.expanduser("~")
-
-def resolve_script_dir():
-    """Get the directory where this script lives."""
-    return Path(__file__).parent.resolve()
-
 # --- Log Output Verbosity ---
 VERBOSE_SEARCH_OUTPUT = True
 
-BASE = resolve_base_path()
-SCRIPT_DIR = resolve_script_dir()
+# Library path (from settings.yml or environment)
+F1_LIBRARY = F1_LIBRARY_PATH
 
-# Library path
-F1_LIBRARY = os.path.join(BASE, "media", "Motorssport", "F1")
-
-# Config directory (relative to script location)
-CONFIG_DIR = SCRIPT_DIR / "config"
+# Config directory
+CONFIG_DIR = get_config_dir()
 
 # State file for tracking searched items
 STATE_FILE = CONFIG_DIR / "grabber_state.json"
 
-# --- Prowlarr Configuration (from environment) ---
-PROWLARR_URL = get_env("PROWLARR_URL", required=True)
-PROWLARR_API_KEY = get_env("PROWLARR_API_KEY", required=True)
+# --- Prowlarr Configuration (from settings.yml or environment) ---
+PROWLARR_URL = get_prowlarr_url()
+PROWLARR_API_KEY = get_prowlarr_api_key()
 
-# --- SABnzbd Configuration (from environment) ---
-SABNZBD_URL = get_env("SABNZBD_URL", required=True)
-SABNZBD_API_KEY = get_env("SABNZBD_API_KEY", required=True)
+# --- SABnzbd Configuration (from settings.yml or environment) ---
+SABNZBD_URL = get_sabnzbd_url()
+SABNZBD_API_KEY = get_sabnzbd_api_key()
 SABNZBD_CATEGORY = "f1"
 
 # --- Grabbing Limits ---

@@ -1,33 +1,9 @@
-#!/data/pythonscripts/venv/bin/python3
+#!/usr/bin/env python3
 """
 F1 Plex Tagger Module
 ======================
 
 Handles Formula 1 content tagging in Plex.
-
-Usage:
-    Standalone full scan:
-        docker exec sabnzbd python3 /data/pythonscripts/motorsport/f1/f1_plex_tagger.py
-        python3 f1_plex_tagger.py
-    
-    Standalone single file:
-        python3 f1_plex_tagger.py --host-path "/path/to/file.mkv"
-  
-    As module (called from f1_sort.py):
-        from f1_plex_tagger import tag_single_file
-        tag_single_file("/container/path/to/file.mkv")
-
-Directory Structure:
-    motorsport/f1/
-    ├── assets/
-    ├── config/
-    │   ├── f1_2025.json
-    │   ├── f1_2026.json
-    │   └── grabber_state.json
-    ├── f1_common.py           <- Shared module
-    ├── f1_grabber.py
-    ├── f1_plex_tagger.py      <- This script
-    └── f1_sort.py
 """
 
 import os
@@ -39,45 +15,43 @@ import logging
 from pathlib import Path
 from plexapi.server import PlexServer
 
-# Add pythonscripts to path for shared utilities
+# Add script directory to path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from utils import load_env, get_env
-
-# Import shared F1 module
+# Import from f1_common (which uses config loader)
 from f1_common import (
     SessionType,
     SESSION_DISPLAY_NAMES,
     load_calendar,
     get_round_by_number,
     parse_prefix,
+    get_plex_url,
+    get_plex_token,
+    get_plex_library_name,
+    get_plex_library_id,
+    get_config_dir,
+    F1_LIBRARY_PATH,
 )
-
-# Load environment variables
-load_env()
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-def resolve_script_dir():
-    """Get the directory where this script lives."""
-    return Path(__file__).parent.resolve()
+# Plex configuration (from settings.yml or environment)
+PLEX_URL = get_plex_url()
+PLEX_TOKEN = get_plex_token()
+PLEX_LIBRARY = get_plex_library_name()
 
-SCRIPT_DIR = resolve_script_dir()
-
-# Plex configuration (from environment)
-PLEX_URL = get_env("PLEX_URL", required=True)
-PLEX_TOKEN = get_env("PLEX_TOKEN", required=True)
-PLEX_LIBRARY = 'Motorsport - F1'  #NEW
+# Validate required settings
+if not PLEX_URL or not PLEX_TOKEN:
+    logging.warning("Plex URL or Token not configured - tagging will fail")
 
 # Library path
-from f1_common import F1_LIBRARY_PATH
 F1_BASE_PATH = F1_LIBRARY_PATH
 
-# Config directory (relative to script location)
-CONFIG_DIR = SCRIPT_DIR / "config"
+# Config directory
+CONFIG_DIR = get_config_dir()
 
 # Feature race session type (for special genre tagging)
 FEATURE_RACE_SESSION = SessionType.RACE

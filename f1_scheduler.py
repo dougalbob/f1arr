@@ -7,10 +7,6 @@ Runs continuously inside the f1arr container with TWO responsibilities:
 
 1. CALENDAR MONITORING: Watches for race weekends and triggers searches
 2. DOWNLOAD WATCHING: Monitors downloads folder for new downloads
-
-Environment Variables:
-    F1_LIBRARY_PATH - Path to F1 media library
-    F1_DOWNLOADS_PATH - Path to completed downloads folder
 """
 
 import os
@@ -29,15 +25,14 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from f1_common import (
     load_calendar,
     F1_LIBRARY_PATH,
+    F1_DOWNLOADS_PATH,
     SESSION_TO_CALENDAR_KEY,
     CALENDAR_KEY_TO_DAY,
     get_config_dir,
+    get_downloads_path,
 )
 
 from f1_watcher import DownloadWatcher, create_watcher
-from utils import load_env, get_env
-
-load_env()
 
 # =============================================================================
 # CONFIGURATION
@@ -49,7 +44,7 @@ CONFIG = {
     "off_weekend_interval_minutes": 360,
     "search_delay_hours": 4,
     "post_race_check_days": 2,
-    "watch_dir": os.environ.get("F1_DOWNLOADS_PATH", "/data/downloads/complete/f1"),
+    "watch_dir": get_downloads_path(),
     "watch_stable_seconds": 30,
     "watch_check_interval": 10,
     "quiet_hours": {

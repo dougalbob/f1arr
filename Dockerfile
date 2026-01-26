@@ -30,7 +30,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
     plexapi \
     python-dateutil \
     flask
-
+    pyyaml
+    
 # Create app directory structure
 WORKDIR /app
 RUN mkdir -p /app/config_defaults /app/assets /app/utils

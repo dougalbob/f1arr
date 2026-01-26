@@ -4,14 +4,10 @@
 SCRIPT_DIR="/app"
 PYTHON="/opt/venv/bin/python3"
 CONFIG_DIR="${CONFIG_DIR:-/config}"
+SETTINGS_FILE="${CONFIG_DIR}/settings.yml"
 
 echo "================================================"
 echo "  F1arr - F1 Automated Recording & Retrieval"
-echo "================================================"
-echo "  Library Path:   ${F1_LIBRARY_PATH:-/media/F1}"
-echo "  Downloads Path: ${F1_DOWNLOADS_PATH:-/downloads/complete/f1}"
-echo "  Config Dir:     ${CONFIG_DIR}"
-echo "  WebUI Port:     5678"
 echo "================================================"
 
 # Ensure config directory exists
@@ -27,6 +23,60 @@ for calendar in /app/config_defaults/f1_*.json; do
         fi
     fi
 done
+
+# Create settings.yml template if it doesn't exist
+if [ ! -f "$SETTINGS_FILE" ]; then
+    echo "  Creating settings.yml template..."
+    cat > "$SETTINGS_FILE" << 'SETTINGS'
+# F1arr Configuration
+# ====================
+# Edit these values to match your setup.
+# Environment variables take priority over these settings.
+
+prowlarr:
+  url: ""          # e.g., http://192.168.1.100:9696
+  api_key: ""
+
+sabnzbd:
+  url: ""          # e.g., http://192.168.1.100:8080
+  api_key: ""
+
+plex:
+  url: ""          # e.g., http://192.168.1.100:32400
+  token: ""
+  library_id: ""   # Plex library section ID (e.g., "2")
+  library_name: "Motorsport - F1"
+
+library:
+  f1_path: "/media/F1"
+  downloads_path: "/downloads/complete/f1"
+
+discord:
+  webhook_url: ""  # Optional: for notifications
+
+timezone: "Europe/London"
+SETTINGS
+    echo "  ⚠️  Please configure ${SETTINGS_FILE}"
+fi
+
+# Validate configuration
+echo ""
+echo "  Checking configuration..."
+$PYTHON -c "
+from utils import config
+v = config.validate()
+if v['valid']:
+    print('  ✅ All required settings configured')
+else:
+    print('  ⚠️  Missing settings:', ', '.join(v['missing']))
+    print('  Edit ${SETTINGS_FILE} or set environment variables')
+"
+
+echo ""
+echo "  Config Dir:     ${CONFIG_DIR}"
+echo "  Settings File:  ${SETTINGS_FILE}"
+echo "  WebUI Port:     5678"
+echo "================================================"
 
 # Start WebUI in background
 echo "Starting WebUI..."

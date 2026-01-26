@@ -4,9 +4,6 @@ F1 Sort - Standalone File Organization and Artwork
 ===================================================
 
 Sorts F1 downloads into the Plex library structure and applies artwork.
-
-Environment Variables:
-    F1_LIBRARY_PATH - Path to F1 media library
 """
 
 import os
@@ -26,9 +23,6 @@ from PIL import Image, ImageDraw, ImageFont
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from utils import load_env, get_env
-load_env()
-
 try:
     from f1_discord import notify_session_added, should_notify
     DISCORD_AVAILABLE = True
@@ -47,15 +41,18 @@ from f1_common import (
     parse_prefix,
     F1_LIBRARY_PATH,
     get_config_dir,
+    get_plex_url,
+    get_plex_token,
+    get_plex_library_id,
 )
 
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
 
-PLEX_URL = get_env("PLEX_URL", "http://192.168.1.241:32400")
-PLEX_TOKEN = get_env("PLEX_TOKEN", required=False)
-LIBRARY_ID = get_env("F1_PLEX_LIBRARY_ID", "2")
+PLEX_URL = get_plex_url() or "http://192.168.1.241:32400"
+PLEX_TOKEN = get_plex_token()
+LIBRARY_ID = get_plex_library_id() or "2"
 
 _plex_url_parsed = PLEX_URL.replace("http://", "").replace("https://", "")
 if ":" in _plex_url_parsed:
@@ -68,6 +65,9 @@ F1_BASE = F1_LIBRARY_PATH
 F1_FANART_DIR = SCRIPT_DIR / "assets" / "f1_fanart"
 F1_POSTERS_DIR = SCRIPT_DIR / "assets" / "f1_posters"
 CONFIG_DIR = get_config_dir()
+
+PLEX_TAGGER_AVAILABLE = False
+tag_single_file = None
 
 PLEX_TAGGER_AVAILABLE = False
 tag_single_file = None
