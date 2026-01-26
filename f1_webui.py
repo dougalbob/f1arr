@@ -445,7 +445,7 @@ HTML_TEMPLATE = """
     <meta name="theme-color" content="#e10600">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="/static/f1_icon.png">
+    <link rel="apple-touch-icon" href="/assets/f1_icon.png">
     <style>
         * { box-sizing: border-box; }
         body {
@@ -1758,22 +1758,25 @@ def manifest():
         "short_name": "F1arr",
         "description": "F1 Automated Recording & Retrieval",
         "start_url": "/",
+        "scope": "/",
         "display": "standalone",
         "background_color": "#000000",
         "theme_color": "#e10600",
+        "orientation": "any",
         "icons": [
             {
-                "src": "/static/f1_icon.png",
+                "src": "/assets/f1_icon.png",
                 "sizes": "192x192",
-                "type": "image/png"
+                "type": "image/png",
+                "purpose": "any maskable"
             }
         ]
     })
 
 
-@app.route("/static/<path:filename>")
+@app.route("/assets/<path:filename>")
 def static_files(filename):
-    return send_from_directory(SCRIPT_DIR / "assets", filename)
+    return send_from_directory(str(SCRIPT_DIR / "assets"), filename)
 
 
 if __name__ == "__main__":
