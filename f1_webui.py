@@ -24,6 +24,7 @@ import re
 from pathlib import Path
 from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify
+from utils import config
 
 # Add paths for imports
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -679,6 +680,119 @@ HTML_TEMPLATE = """
         .output::-webkit-scrollbar-track { background: #0a0a12; }
         .output::-webkit-scrollbar-thumb { background: #2a2a3e; border-radius: 4px; }
         .output::-webkit-scrollbar-thumb:hover { background: #3a3a4e; }
+        /* Sub-tabs for Settings */
+        .sub-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a1a2e;
+            padding-bottom: 10px;
+        }
+        .sub-tab {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid #2a2a3e;
+            color: #888;
+            cursor: pointer;
+            border-radius: 20px;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .sub-tab:hover { color: #fff; border-color: #e10600; }
+        .sub-tab.active { 
+            background: #e10600; 
+            color: #fff; 
+            border-color: #e10600; 
+        }
+        .sub-tab-content { display: none; }
+        .sub-tab-content.active { display: block; }
+        
+        /* Config form styles */
+        .config-section {
+            background: #0d0d14;
+            border: 1px solid #1a1a2e;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .config-section h3 {
+            margin-top: 0;
+            color: #e10600;
+            border-bottom: 1px solid #1a1a2e;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        .config-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .config-field {
+            flex: 1;
+            min-width: 250px;
+        }
+        .config-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #aaa;
+        }
+        .config-field input[type="text"],
+        .config-field input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            background: #141420;
+            border: 1px solid #2a2a3e;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .config-field input:focus {
+            outline: none;
+            border-color: #e10600;
+        }
+        .config-field .input-with-toggle {
+            position: relative;
+        }
+        .config-field .toggle-visibility {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 14px;
+        }
+        .config-field .toggle-visibility:hover { color: #fff; }
+        .config-field input[type="password"],
+        .config-field input[type="text"].secret {
+            padding-right: 40px;
+        }
+        .config-help {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .validation-status {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .validation-status.valid {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid #27ae60;
+            color: #27ae60;
+        }
+        .validation-status.invalid {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid #e74c3c;
+            color: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -813,39 +927,201 @@ HTML_TEMPLATE = """
     <!-- Settings Tab -->
     <div id="settings-tab" class="tab-content">
         <div class="card">
-            <h2>Grabbing Settings</h2>
-            <div class="save-notice" id="save-notice">✅ Settings saved successfully!</div>
-            <div class="form-group inline-form">
-                <label for="max-grabs">Max grabs per run:</label>
-                <input type="number" id="max-grabs" min="1" max="50" value="{{ settings.max_grabs_per_run }}">
-                <span style="color: #666; font-size: 14px;">Limits how many sessions are grabbed in one scheduled run</span>
+            <!-- Sub-tabs -->
+            <div class="sub-tabs">
+                <button class="sub-tab active" onclick="showSubTab('grabbing')">Grabbing</button>
+                <button class="sub-tab" onclick="showSubTab('app-config')">App Config</button>
             </div>
-        </div>
-
-        <div class="card">
-            <h2>Desired Sessions</h2>
-            <p style="color: #666; margin-bottom: 20px;">Select which session types to search for and download.</p>
-            <div class="sessions-grid">
-                {% for group_name, session_keys in session_groups.items() %}
-                <div class="session-group">
-                    <h3>{{ group_name }}</h3>
-                    {% for key in session_keys %}
-                    {% if key in session_types %}
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="session-{{ key }}" data-session="{{ key }}"
-                               {{ 'checked' if settings.sessions.get(key, session_types[key].default) }}>
-                        <label for="session-{{ key }}">{{ session_types[key].name }}</label>
+            
+            <!-- Grabbing Sub-tab -->
+            <div id="grabbing-subtab" class="sub-tab-content active">
+                <div class="save-notice" id="save-notice">✅ Settings saved successfully!</div>
+                
+                <h2>Grabbing Settings</h2>
+                <div class="form-group inline-form">
+                    <label for="max-grabs">Max grabs per run:</label>
+                    <input type="number" id="max-grabs" min="1" max="50" value="{{ settings.max_grabs_per_run }}">
+                    <span style="color: #666; font-size: 14px;">Limits how many sessions are grabbed in one scheduled run</span>
+                </div>
+                
+                <h2 style="margin-top: 30px;">Desired Sessions</h2>
+                <p style="color: #666; margin-bottom: 20px;">Select which session types to search for and download.</p>
+                <div class="sessions-grid">
+                    {% for group_name, session_keys in session_groups.items() %}
+                    <div class="session-group">
+                        <h3>{{ group_name }}</h3>
+                        {% for key in session_keys %}
+                        {% if key in session_types %}
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="session-{{ key }}" data-session="{{ key }}"
+                                   {{ 'checked' if settings.sessions.get(key, session_types[key].default) }}>
+                            <label for="session-{{ key }}">{{ session_types[key].name }}</label>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
                     </div>
-                    {% endif %}
                     {% endfor %}
                 </div>
-                {% endfor %}
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="saveSettings()" class="success">💾 Save Settings</button>
+                    <button onclick="selectAll(true)" class="secondary">Select All</button>
+                    <button onclick="selectAll(false)" class="secondary">Deselect All</button>
+                    <button onclick="resetDefaults()" class="secondary">Reset Defaults</button>
+                </div>
             </div>
-            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button onclick="saveSettings()" class="success">💾 Save Settings</button>
-                <button onclick="selectAll(true)" class="secondary">Select All</button>
-                <button onclick="selectAll(false)" class="secondary">Deselect All</button>
-                <button onclick="resetDefaults()" class="secondary">Reset Defaults</button>
+            
+            <!-- App Config Sub-tab -->
+            <div id="app-config-subtab" class="sub-tab-content">
+                <div class="save-notice" id="config-save-notice">✅ Configuration saved successfully!</div>
+                <div class="validation-status" id="config-validation"></div>
+                
+                <h2>Application Configuration</h2>
+                <p style="color: #666; margin-bottom: 20px;">Configure connections to Prowlarr, SABnzbd, and Plex.</p>
+                
+                <!-- Prowlarr -->
+                <div class="config-section">
+                    <h3>🔍 Prowlarr</h3>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-prowlarr-url">URL</label>
+                            <input type="text" id="cfg-prowlarr-url" placeholder="http://192.168.1.100:9696">
+                            <div class="config-help">Prowlarr server URL including port</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-prowlarr-key">API Key</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="cfg-prowlarr-key" placeholder="API Key">
+                                <button type="button" class="toggle-visibility" onclick="togglePassword('cfg-prowlarr-key')">👁️</button>
+                            </div>
+                            <div class="config-help">Found in Prowlarr → Settings → General</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SABnzbd -->
+                <div class="config-section">
+                    <h3>📥 SABnzbd</h3>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-sabnzbd-url">URL</label>
+                            <input type="text" id="cfg-sabnzbd-url" placeholder="http://192.168.1.100:8080">
+                            <div class="config-help">SABnzbd server URL including port</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-sabnzbd-key">API Key</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="cfg-sabnzbd-key" placeholder="API Key">
+                                <button type="button" class="toggle-visibility" onclick="togglePassword('cfg-sabnzbd-key')">👁️</button>
+                            </div>
+                            <div class="config-help">Found in SABnzbd → Config → General</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Plex -->
+                <div class="config-section">
+                    <h3>🎬 Plex</h3>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-plex-url">URL</label>
+                            <input type="text" id="cfg-plex-url" placeholder="http://192.168.1.100:32400">
+                            <div class="config-help">Plex server URL including port</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-plex-token">Token</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="cfg-plex-token" placeholder="Plex Token">
+                                <button type="button" class="toggle-visibility" onclick="togglePassword('cfg-plex-token')">👁️</button>
+                            </div>
+                            <div class="config-help"><a href="https://support.plex.tv/articles/204059436" target="_blank" style="color: #e10600;">How to find your Plex token</a></div>
+                        </div>
+                    </div>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-plex-library-id">Library ID</label>
+                            <input type="text" id="cfg-plex-library-id" placeholder="2">
+                            <div class="config-help">Section ID from Plex URL (e.g., /library/sections/<strong>2</strong>/)</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-plex-library-name">Library Name</label>
+                            <input type="text" id="cfg-plex-library-name" placeholder="Motorsport - F1">
+                            <div class="config-help">Display name of your F1 library in Plex</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Path Mapping -->
+                <div class="config-section">
+                    <h3>📁 Path Mapping</h3>
+                    <p style="color: #888; font-size: 13px; margin-bottom: 15px;">
+                        Map paths between this container and Plex. Required if Plex sees files at a different path.
+                    </p>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-path-container">Container Path</label>
+                            <input type="text" id="cfg-path-container" placeholder="/media">
+                            <div class="config-help">Path as seen by f1arr (e.g., /media)</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-path-plex">Plex Path</label>
+                            <input type="text" id="cfg-path-plex" placeholder="/data/media">
+                            <div class="config-help">Same path as seen by Plex (e.g., /data/media)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Library Paths -->
+                <div class="config-section">
+                    <h3>📂 Library Paths</h3>
+                    <p style="color: #888; font-size: 13px; margin-bottom: 15px;">
+                        Paths inside this container (must match your volume mounts).
+                    </p>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-f1-path">F1 Library Path</label>
+                            <input type="text" id="cfg-f1-path" placeholder="/media/Motorsport/F1">
+                            <div class="config-help">Where F1 content is stored (inside container)</div>
+                        </div>
+                        <div class="config-field">
+                            <label for="cfg-downloads-path">Downloads Path</label>
+                            <input type="text" id="cfg-downloads-path" placeholder="/downloads/complete/f1">
+                            <div class="config-help">Where SABnzbd puts completed F1 downloads</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Discord -->
+                <div class="config-section">
+                    <h3>💬 Discord (Optional)</h3>
+                    <div class="config-row">
+                        <div class="config-field" style="flex: 2;">
+                            <label for="cfg-discord-webhook">Webhook URL</label>
+                            <div class="input-with-toggle">
+                                <input type="password" id="cfg-discord-webhook" placeholder="https://discord.com/api/webhooks/...">
+                                <button type="button" class="toggle-visibility" onclick="togglePassword('cfg-discord-webhook')">👁️</button>
+                            </div>
+                            <div class="config-help">Discord webhook for notifications (leave empty to disable)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timezone -->
+                <div class="config-section">
+                    <h3>🕐 Timezone</h3>
+                    <div class="config-row">
+                        <div class="config-field">
+                            <label for="cfg-timezone">Timezone</label>
+                            <input type="text" id="cfg-timezone" placeholder="Europe/London">
+                            <div class="config-help">Container timezone (e.g., Europe/London, America/New_York)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="saveAppConfig()" class="success">💾 Save Configuration</button>
+                    <button onclick="testConnections()" class="secondary">🔌 Test Connections</button>
+                    <button onclick="loadAppConfig()" class="secondary">🔄 Reload</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1051,6 +1327,140 @@ HTML_TEMPLATE = """
         {% if status.running %}
         setTimeout(() => location.reload(), 3000);
         {% endif %}
+        // Sub-tab handling
+        function showSubTab(tabName) {
+            document.querySelectorAll('.sub-tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName + '-subtab').classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'app-config') {
+                loadAppConfig();
+            }
+        }
+        
+        // Toggle password visibility
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+        
+        // Load app config from server
+        function loadAppConfig() {
+            fetch('/app-config')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('cfg-prowlarr-url').value = data.prowlarr?.url || '';
+                    document.getElementById('cfg-prowlarr-key').value = data.prowlarr?.api_key || '';
+                    document.getElementById('cfg-sabnzbd-url').value = data.sabnzbd?.url || '';
+                    document.getElementById('cfg-sabnzbd-key').value = data.sabnzbd?.api_key || '';
+                    document.getElementById('cfg-plex-url').value = data.plex?.url || '';
+                    document.getElementById('cfg-plex-token').value = data.plex?.token || '';
+                    document.getElementById('cfg-plex-library-id').value = data.plex?.library_id || '';
+                    document.getElementById('cfg-plex-library-name').value = data.plex?.library_name || '';
+                    document.getElementById('cfg-path-container').value = data.plex?.path_mapping?.container || '';
+                    document.getElementById('cfg-path-plex').value = data.plex?.path_mapping?.plex || '';
+                    document.getElementById('cfg-f1-path').value = data.library?.f1_path || '';
+                    document.getElementById('cfg-downloads-path').value = data.library?.downloads_path || '';
+                    document.getElementById('cfg-discord-webhook').value = data.discord?.webhook_url || '';
+                    document.getElementById('cfg-timezone').value = data.timezone || 'Europe/London';
+                    
+                    // Update validation status
+                    updateValidationStatus(data.validation);
+                });
+        }
+        
+        // Update validation status display
+        function updateValidationStatus(validation) {
+            const el = document.getElementById('config-validation');
+            if (!validation) {
+                el.style.display = 'none';
+                return;
+            }
+            
+            el.style.display = 'block';
+            if (validation.valid) {
+                el.className = 'validation-status valid';
+                el.innerHTML = '✅ All required settings configured';
+            } else {
+                el.className = 'validation-status invalid';
+                el.innerHTML = '⚠️ Missing: ' + validation.missing.join(', ');
+            }
+        }
+        
+        // Save app config
+        function saveAppConfig() {
+            const config = {
+                prowlarr: {
+                    url: document.getElementById('cfg-prowlarr-url').value,
+                    api_key: document.getElementById('cfg-prowlarr-key').value
+                },
+                sabnzbd: {
+                    url: document.getElementById('cfg-sabnzbd-url').value,
+                    api_key: document.getElementById('cfg-sabnzbd-key').value
+                },
+                plex: {
+                    url: document.getElementById('cfg-plex-url').value,
+                    token: document.getElementById('cfg-plex-token').value,
+                    library_id: document.getElementById('cfg-plex-library-id').value,
+                    library_name: document.getElementById('cfg-plex-library-name').value,
+                    path_mapping: {
+                        container: document.getElementById('cfg-path-container').value,
+                        plex: document.getElementById('cfg-path-plex').value
+                    }
+                },
+                library: {
+                    f1_path: document.getElementById('cfg-f1-path').value,
+                    downloads_path: document.getElementById('cfg-downloads-path').value
+                },
+                discord: {
+                    webhook_url: document.getElementById('cfg-discord-webhook').value
+                },
+                timezone: document.getElementById('cfg-timezone').value
+            };
+            
+            fetch('/app-config', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(config)
+            })
+            .then(r => r.json())
+            .then(data => {
+                const notice = document.getElementById('config-save-notice');
+                notice.classList.add('show');
+                setTimeout(() => notice.classList.remove('show'), 3000);
+                
+                if (data.validation) {
+                    updateValidationStatus(data.validation);
+                }
+            });
+        }
+        
+        // Test connections
+        function testConnections() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Testing...';
+            
+            fetch('/test-connections')
+                .then(r => r.json())
+                .then(data => {
+                    let msg = 'Connection Test Results:\\n\\n';
+                    msg += `Prowlarr: ${data.prowlarr ? '✅ Connected' : '❌ Failed'}\\n`;
+                    msg += `SABnzbd: ${data.sabnzbd ? '✅ Connected' : '❌ Failed'}\\n`;
+                    msg += `Plex: ${data.plex ? '✅ Connected' : '❌ Failed'}\\n`;
+                    
+                    if (data.errors) {
+                        msg += '\\nErrors:\\n' + data.errors.join('\\n');
+                    }
+                    
+                    alert(msg);
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = '🔌 Test Connections';
+                });
+        }
     </script>
 </body>
 </html>
@@ -1249,6 +1659,92 @@ def library_status():
             session["type"] = session["type"].name
     
     return jsonify(data)
+
+@app.route("/app-config", methods=["GET", "POST"])
+def app_config_route():
+    """Get or save app configuration (settings.yml)."""
+    from utils import config
+    
+    if request.method == "POST":
+        new_config = request.json
+        
+        # Build the full settings structure
+        settings = {
+            "prowlarr": new_config.get("prowlarr", {}),
+            "sabnzbd": new_config.get("sabnzbd", {}),
+            "plex": new_config.get("plex", {}),
+            "library": new_config.get("library", {}),
+            "discord": new_config.get("discord", {}),
+            "timezone": new_config.get("timezone", "Europe/London"),
+        }
+        
+        # Save to settings.yml
+        success = config.save_settings(settings)
+        
+        # Reload settings
+        config.reload_settings()
+        validation = config.validate()
+        
+        return jsonify({
+            "status": "saved" if success else "error",
+            "validation": validation
+        })
+    else:
+        # Load current settings
+        config.reload_settings()
+        settings = config._load_yaml()
+        validation = config.validate()
+        
+        return jsonify({
+            **settings,
+            "validation": validation
+        })
+
+
+@app.route("/test-connections")
+def test_connections():
+    """Test connections to Prowlarr, SABnzbd, and Plex."""
+    import requests as req
+    from utils import config
+    
+    results = {
+        "prowlarr": False,
+        "sabnzbd": False,
+        "plex": False,
+        "errors": []
+    }
+    
+    # Test Prowlarr
+    try:
+        url = config.get_prowlarr_url()
+        key = config.get_prowlarr_api_key()
+        if url and key:
+            r = req.get(f"{url}/api/v1/health", headers={"X-Api-Key": key}, timeout=5)
+            results["prowlarr"] = r.status_code == 200
+    except Exception as e:
+        results["errors"].append(f"Prowlarr: {str(e)}")
+    
+    # Test SABnzbd
+    try:
+        url = config.get_sabnzbd_url()
+        key = config.get_sabnzbd_api_key()
+        if url and key:
+            r = req.get(f"{url}/api?mode=version&apikey={key}&output=json", timeout=5)
+            results["sabnzbd"] = r.status_code == 200
+    except Exception as e:
+        results["errors"].append(f"SABnzbd: {str(e)}")
+    
+    # Test Plex
+    try:
+        url = config.get_plex_url()
+        token = config.get_plex_token()
+        if url and token:
+            r = req.get(f"{url}/?X-Plex-Token={token}", timeout=5)
+            results["plex"] = r.status_code == 200
+    except Exception as e:
+        results["errors"].append(f"Plex: {str(e)}")
+    
+    return jsonify(results)
 
 
 if __name__ == "__main__":
