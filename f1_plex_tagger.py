@@ -32,6 +32,7 @@ from f1_common import (
     get_plex_library_id,
     get_config_dir,
     F1_LIBRARY_PATH,
+    translate_path_for_plex,
 )
 
 # =============================================================================
@@ -298,8 +299,11 @@ def tag_single_file(file_path, dry_run=False, wait_for_plex=True):
         time.sleep(5)
     
     retries = MAX_RETRIES if wait_for_plex else 1
-    video = find_plex_item_by_path(plex, PLEX_LIBRARY, file_path, retries=retries)
-    
+
+    plex_path = translate_path_for_plex(file_path)
+    logger.info(f"  Plex path: {plex_path}")
+    video = find_plex_item_by_path(plex, PLEX_LIBRARY, plex_path, retries=retries)
+
     if not video:
         logger.error(f"  ❌ File not found in Plex")
         return False

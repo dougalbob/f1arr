@@ -172,6 +172,25 @@ def get_discord_webhook() -> Optional[str]:
 def get_timezone() -> str:
     return os.environ.get("TZ") or get("timezone", default="Europe/London")
 
+def get_plex_path_mapping() -> dict:
+    """Get Plex path mapping for translating between container and Plex paths."""
+    return {
+        "container": get("plex", "path_mapping", {}).get("container") if isinstance(get("plex", "path_mapping"), dict) else None,
+        "plex": get("plex", "path_mapping", {}).get("plex") if isinstance(get("plex", "path_mapping"), dict) else None,
+    }
+
+
+def translate_path_for_plex(container_path: str) -> str:
+    """Translate a container path to what Plex expects."""
+    mapping = get_plex_path_mapping()
+    container_prefix = mapping.get("container")
+    plex_prefix = mapping.get("plex")
+    
+    if container_prefix and plex_prefix and container_path.startswith(container_prefix):
+        return container_path.replace(container_prefix, plex_prefix, 1)
+    
+    return container_path
+
 
 # =============================================================================
 # VALIDATION
@@ -314,6 +333,28 @@ def save_settings(settings: Dict) -> bool:
     except Exception as e:
         print(f"Error saving settings: {e}")
         return False
+
+def get_plex_path_mapping() -> dict:
+    """Get Plex path mapping for translating between container and Plex paths."""
+    mapping = get("plex", "path_mapping")
+    if isinstance(mapping, dict):
+        return {
+            "container": mapping.get("container"),
+            "plex": mapping.get("plex"),
+        }
+    return {"container": None, "plex": None}
+
+
+def translate_path_for_plex(container_path: str) -> str:
+    """Translate a container path to what Plex expects."""
+    mapping = get_plex_path_mapping()
+    container_prefix = mapping.get("container")
+    plex_prefix = mapping.get("plex")
+    
+    if container_prefix and plex_prefix and container_path.startswith(container_prefix):
+        return container_path.replace(container_prefix, plex_prefix, 1)
+    
+    return container_path
 
 
 # =============================================================================

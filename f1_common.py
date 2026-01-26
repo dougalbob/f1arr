@@ -69,6 +69,9 @@ try:
     
     def get_discord_webhook() -> Optional[str]:
         return _config.get_discord_webhook()
+    
+    def translate_path_for_plex(path: str) -> str:
+        return _config.translate_path_for_plex(path)
 
 except ImportError:
     _USE_CONFIG_LOADER = False
@@ -105,6 +108,9 @@ except ImportError:
     
     def get_discord_webhook() -> Optional[str]:
         return os.environ.get("DISCORD_WEBHOOK_URL")
+        
+    def translate_path_for_plex(path: str) -> str:
+        return path  # No translation without config loader
 
 # Export commonly used paths
 SCRIPT_DIR = get_script_dir()
