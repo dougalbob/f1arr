@@ -32,6 +32,31 @@ if [ ! -f "$SETTINGS_FILE" ]; then
 # ====================
 # Edit these values to match your setup.
 # Environment variables take priority over these settings.
+#
+# IMPORTANT: Path Configuration
+# -----------------------------
+# Paths in this file are CONTAINER paths, not host paths.
+# They must match your Docker volume mounts.
+#
+# Example volume mounts (docker run):
+#   -v /mnt/user/data/media:/media
+#   -v /mnt/user/data/downloads:/downloads
+#   -v /mnt/user/appdata/f1arr:/config
+#
+# Example Unraid paths:
+#   Host path:       /mnt/user/data/media/Motorsport/F1
+#   Container mount: /media
+#   Config value:    /media/Motorsport/F1
+#
+#   Host path:       /mnt/user/data/downloads/complete/f1
+#   Container mount: /downloads
+#   Config value:    /downloads/complete/f1
+#
+# To find your Plex library ID:
+#   1. Open Plex web interface
+#   2. Go to your F1 library
+#   3. Look at the URL - it contains: /library/sections/X/
+#   4. X is your library_id
 
 prowlarr:
   url: ""          # e.g., http://192.168.1.100:9696
@@ -43,16 +68,17 @@ sabnzbd:
 
 plex:
   url: ""          # e.g., http://192.168.1.100:32400
-  token: ""
-  library_id: ""   # Plex library section ID (e.g., "2")
-  library_name: "Motorsport - F1"
+  token: ""        # See: https://support.plex.tv/articles/204059436
+  library_id: ""   # Plex library section ID (see instructions above)
+  library_name: "Motorsport - F1"  # Display name of your F1 library in Plex
 
 library:
-  f1_path: "/media/F1"
-  downloads_path: "/downloads/complete/f1"
+  # Container paths - must match your volume mounts!
+  f1_path: "/media/F1"              # Where F1 content is stored (inside container)
+  downloads_path: "/downloads/complete/f1"  # Where SABnzbd puts completed F1 downloads
 
 discord:
-  webhook_url: ""  # Optional: for notifications
+  webhook_url: ""  # Optional: Discord webhook for notifications
 
 timezone: "Europe/London"
 SETTINGS
