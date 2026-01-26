@@ -37,7 +37,7 @@ class DownloadWatcher:
         self,
         watch_dir: str,
         processor: Callable[[str], bool],
-        stable_seconds: int = 30,
+        stable_seconds: int = 15,
         check_interval: int = 10,
         processed_state_file: Optional[str] = None
     ):
@@ -268,7 +268,7 @@ def create_watcher(
     return DownloadWatcher(
         watch_dir=watch_dir,
         processor=processor,
-        stable_seconds=30,
+        stable_seconds=15,
         check_interval=10,
         processed_state_file=state_file
     )
