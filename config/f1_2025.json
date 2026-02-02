@@ -4,9 +4,10 @@
     {
       "round": 1,
       "venue": "Australia",
+      "flag": "au.svg",
       "aliases": ["australia", "australian"],
       "date": "2025-03-16",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 1 Australia",
       "fanart": "fanart_australia_melbourne_f1.jpg",
       "poster": "poster_australia_melbourne_f1.jpg"
@@ -14,9 +15,10 @@
     {
       "round": 2,
       "venue": "China",
+      "flag": "cn.svg",
       "aliases": ["china", "chinese"],
       "date": "2025-03-23",
-	  "sprint_weekend": true,
+      "sprint_weekend": true,
       "folder": "Round 2 China",
       "fanart": "fanart_china_shanghai_f1.jpg",
       "poster": "poster_china_shanghai_f1.jpg"
@@ -24,19 +26,21 @@
     {
       "round": 3,
       "venue": "Japan",
+      "flag": "jp.svg",
       "aliases": ["japan", "japanese"],
       "date": "2025-04-06",
-	  "sprint_weekend": false,
-	  "folder": "Round 3 Japan",
+      "sprint_weekend": false,
+      "folder": "Round 3 Japan",
       "fanart": "fanart_japan_suzuka_f1.jpg",
       "poster": "poster_japan_suzuka_f1.jpg"
     },
     {
       "round": 4,
       "venue": "Bahrain",
+      "flag": "bh.svg",
       "aliases": ["bahrain"],
       "date": "2025-04-13",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 4 Bahrain",
       "fanart": "fanart_bahrain_sakhir_f1.jpg",
       "poster": "poster_bahrain_sakhir_f1.jpg"
@@ -44,29 +48,32 @@
     {
       "round": 5,
       "venue": "Saudi Arabia",
+      "flag": "sa.svg",
       "aliases": ["saudi", "jeddah"],
       "date": "2025-04-20",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 5 Saudi Arabia",
       "fanart": "fanart_saudi_arabia_jeddah_f1.jpg",
       "poster": "poster_saudi_arabia_jeddah_f1.jpg"
     },
     {
-	  "round": 6,
-	  "venue": "Miami",
-	  "aliases": ["miami", "miami grand prix", "miami gardens", "usa", "american"],
-	  "date": "2025-05-04",
-	  "sprint_weekend": true,
-	  "folder": "Round 6 Miami",
-	  "fanart": "fanart_usa_miami_f1.jpg",
-	  "poster": "poster_usa_miami_f1.jpg"
-	},
+      "round": 6,
+      "venue": "Miami",
+      "flag": "us.svg",
+      "aliases": ["miami", "miami grand prix", "miami gardens", "usa", "american"],
+      "date": "2025-05-04",
+      "sprint_weekend": true,
+      "folder": "Round 6 Miami",
+      "fanart": "fanart_usa_miami_f1.jpg",
+      "poster": "poster_usa_miami_f1.jpg"
+    },
     {
       "round": 7,
       "venue": "Emilia Romagna",
+      "flag": "it.svg",
       "aliases": ["emilia", "romagna", "imola"],
       "date": "2025-05-18",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 7 Emilia Romagna",
       "fanart": "fanart_italy_imola_f1.jpg",
       "poster": "poster_italy_imola_f1.jpg"
@@ -74,9 +81,10 @@
     {
       "round": 8,
       "venue": "Monaco",
+      "flag": "mc.svg",
       "aliases": ["monaco"],
       "date": "2025-05-25",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 8 Monaco",
       "fanart": "fanart_monaco_monte_carlo_f1.jpg",
       "poster": "poster_monaco_monte_carlo_f1.jpg"
@@ -84,9 +92,10 @@
     {
       "round": 9,
       "venue": "Barcelona",
+      "flag": "es.svg",
       "aliases": ["spanish", "barcelona", "spain", "catalunya"],
       "date": "2025-06-01",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 9 Barcelona",
       "fanart": "fanart_spain_barcelona_f1.jpg",
       "poster": "poster_spain_barcelona_f1.jpg"
@@ -94,19 +103,21 @@
     {
       "round": 10,
       "venue": "Canada",
+      "flag": "ca.svg",
       "aliases": ["canadian", "canada", "montreal"],
       "date": "2025-06-15",
+      "sprint_weekend": false,
       "folder": "Round 10 Canada",
-	  "sprint_weekend": false,
       "fanart": "fanart_canada_montreal_f1.jpg",
       "poster": "poster_canada_montreal_f1.jpg"
     },
     {
       "round": 11,
       "venue": "Austria",
+      "flag": "at.svg",
       "aliases": ["austria", "austrian", "spielberg"],
       "date": "2025-06-29",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 11 Austria",
       "fanart": "fanart_austria_red_bull_ring_f1.jpg",
       "poster": "poster_austria_red_bull_ring_f1.jpg"
@@ -114,9 +125,10 @@
     {
       "round": 12,
       "venue": "Great Britain",
+      "flag": "gb.svg",
       "aliases": ["british", "silverstone", "britain", "uk"],
       "date": "2025-07-06",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 12 Great Britain",
       "fanart": "fanart_uk_silverstone_f1.jpg",
       "poster": "poster_uk_silverstone_f1.jpg"
@@ -124,9 +136,10 @@
     {
       "round": 13,
       "venue": "Belgium",
+      "flag": "be.svg",
       "aliases": ["belgian", "spa", "belgium"],
-      "date": "2025-07-20",
-	  "sprint_weekend": true,
+      "date": "2025-07-27",
+      "sprint_weekend": true,
       "folder": "Round 13 Belgium",
       "fanart": "fanart_belgium_spa-francorchamps_f1.jpg",
       "poster": "poster_belgium_spa-francorchamps_f1.jpg"
@@ -134,9 +147,10 @@
     {
       "round": 14,
       "venue": "Hungary",
+      "flag": "hu.svg",
       "aliases": ["hungary", "hungarian", "budapest"],
-      "date": "2025-07-27",
-	  "sprint_weekend": false,
+      "date": "2025-08-03",
+      "sprint_weekend": false,
       "folder": "Round 14 Hungary",
       "fanart": "fanart_hungary_hungaroring_f1.jpg",
       "poster": "poster_hungary_hungaroring_f1.jpg"
@@ -144,9 +158,10 @@
     {
       "round": 15,
       "venue": "Netherlands",
+      "flag": "nl.svg",
       "aliases": ["netherlands", "dutch", "zandvoort", "holland"],
       "date": "2025-08-31",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 15 Netherlands",
       "fanart": "fanart_netherlands_zandvoort_f1.jpg",
       "poster": "poster_netherlands_zandvoort_f1.jpg"
@@ -154,9 +169,10 @@
     {
       "round": 16,
       "venue": "Monza",
+      "flag": "it.svg",
       "aliases": ["italian", "monza", "italy"],
       "date": "2025-09-07",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 16 Monza",
       "fanart": "fanart_italy_monza_f1.jpg",
       "poster": "poster_italy_monza_f1.jpg"
@@ -164,9 +180,10 @@
     {
       "round": 17,
       "venue": "Azerbaijan",
+      "flag": "az.svg",
       "aliases": ["azerbaijan", "baku"],
       "date": "2025-09-21",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 17 Azerbaijan",
       "fanart": "fanart_azerbaijan_baku_f1.jpg",
       "poster": "poster_azerbaijan_baku_f1.jpg"
@@ -174,29 +191,32 @@
     {
       "round": 18,
       "venue": "Singapore",
+      "flag": "sg.svg",
       "aliases": ["singapore"],
       "date": "2025-10-05",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 18 Singapore",
       "fanart": "fanart_singapore_marina_bay_f1.jpg",
       "poster": "poster_singapore_marina_bay_f1.jpg"
     },
     {
-	  "round": 19,
-	  "venue": "Austin",
-	  "aliases": ["austin", "cota", "american grand prix", "united states grand prix", "texas", "usa"],
-	  "date": "2025-10-19",
-	  "sprint_weekend": true,
-	  "folder": "Round 19 Austin",
-	  "fanart": "fanart_usa_austin_cota_f1.jpg",
-	  "poster": "poster_usa_austin_cota_f1.jpg"
-	},
+      "round": 19,
+      "venue": "Austin",
+      "flag": "us.svg",
+      "aliases": ["austin", "cota", "american grand prix", "united states grand prix", "texas", "usa"],
+      "date": "2025-10-19",
+      "sprint_weekend": true,
+      "folder": "Round 19 Austin",
+      "fanart": "fanart_usa_austin_cota_f1.jpg",
+      "poster": "poster_usa_austin_cota_f1.jpg"
+    },
     {
       "round": 20,
       "venue": "Mexico",
+      "flag": "mx.svg",
       "aliases": ["mexican", "mexico"],
       "date": "2025-10-26",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 20 Mexico",
       "fanart": "fanart_mexico_mexico_city_f1.jpg",
       "poster": "poster_mexico_mexico_city_f1.jpg"
@@ -204,29 +224,32 @@
     {
       "round": 21,
       "venue": "Brazil",
+      "flag": "br.svg",
       "aliases": ["brazil", "brazilian", "interlagos"],
       "date": "2025-11-09",
-	  "sprint_weekend": true,
+      "sprint_weekend": true,
       "folder": "Round 21 Brazil",
       "fanart": "fanart_brazil_interlagos_f1.jpg",
       "poster": "poster_brazil_interlagos_f1.jpg"
     },
     {
-	  "round": 22,
-	  "venue": "Las Vegas",
-	  "aliases": ["las vegas", "vegas", "las vegas grand prix", "usa"],
-	  "date": "2025-11-22",
-	  "sprint_weekend": false,
-	  "folder": "Round 22 Las Vegas",
-	  "fanart": "fanart_lasvegas.jpg",
-	  "poster": "poster_lasvegas.jpg"
-	},
+      "round": 22,
+      "venue": "Las Vegas",
+      "flag": "us.svg",
+      "aliases": ["las vegas", "vegas", "las vegas grand prix", "usa"],
+      "date": "2025-11-22",
+      "sprint_weekend": false,
+      "folder": "Round 22 Las Vegas",
+      "fanart": "fanart_lasvegas.jpg",
+      "poster": "poster_lasvegas.jpg"
+    },
     {
       "round": 23,
       "venue": "Qatar",
+      "flag": "qa.svg",
       "aliases": ["qatar", "lusail"],
       "date": "2025-11-30",
-	  "sprint_weekend": true,
+      "sprint_weekend": true,
       "folder": "Round 23 Qatar",
       "fanart": "fanart_qatar_lusail_f1.jpg",
       "poster": "poster_qatar_lusail_f1.jpg"
@@ -234,9 +257,10 @@
     {
       "round": 24,
       "venue": "Abu Dhabi",
+      "flag": "ae.svg",
       "aliases": ["abudhabi", "yas"],
       "date": "2025-12-07",
-	  "sprint_weekend": false,
+      "sprint_weekend": false,
       "folder": "Round 24 Abu Dhabi",
       "fanart": "fanart_abudhabi_yas_marina_f1.jpg",
       "poster": "poster_abudhabi_yas_marina_f1.jpg"

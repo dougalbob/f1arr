@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <h2>Live Logs</h2>
+    
+    <div class="log-controls">
+        <select id="log-level" onchange="filterLogs()">
+            <option value="all">All Levels</option>
+            <option value="debug">Debug+</option>
+            <option value="info" selected>Info+</option>
+            <option value="warning">Warning+</option>
+            <option value="error">Error Only</option>
+        </select>
+        
+        <label class="checkbox-group" style="margin: 0;">
+            <input type="checkbox" id="auto-scroll" checked>
+            <span>Auto-scroll</span>
+        </label>
+        
+        <button class="small secondary" onclick="clearLogs()">Clear Display</button>
+        <button class="small secondary" onclick="reconnect()">Reconnect</button>
+        
+        <span class="connection-status" id="connection-status">Connecting...</span>
+    </div>
+    
+    <div class="log-viewer" id="log-viewer"></div>
+    
+    <div class="log-stats">
+        <span id="log-count">0 lines</span>
+        <span id="last-update">-</span>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allLogLines = [];
+    let eventSource = null;
+    const maxLines = 1000;
+    
+    const levelPriority = {
+        'debug': 0,
+        'info': 1,
+        'warning': 2,
+        'error': 3
+    };
+    
+    function detectLogLevel(line) {
+        const lower = line.toLowerCase();
+        if (lower.includes('error') || lower.includes('❌') || lower.includes('failed')) return 'error';
+        if (lower.includes('warning') || lower.includes('⚠')) return 'warning';
+        if (lower.includes('success') || lower.includes('✅') || lower.includes('complete')) return 'success';
+        if (lower.includes('info') || lower.includes('ℹ')) return 'info';
+        return 'debug';
+    }
+    
+    function filterLogs() {
+        const viewer = document.getElementById('log-viewer');
+        const level = document.getElementById('log-level').value;
+        const minPriority = level === 'all' ? -1 : levelPriority[level] || 0;
+        
+        viewer.innerHTML = '';
+        
+        allLogLines.forEach(line => {
+            const lineLevel = detectLogLevel(line);
+            const linePriority = levelPriority[lineLevel] ?? 1;
+            
+            if (linePriority >= minPriority || level === 'all') {
+                const div = document.createElement('div');
+                div.className = `log-line ${lineLevel}`;
+                div.textContent = line;
+                viewer.appendChild(div);
+            }
+        });
+        
+        if (document.getElementById('auto-scroll').checked) {
+            viewer.scrollTop = viewer.scrollHeight;
+        }
+        
+        document.getElementById('log-count').textContent = `${viewer.children.length} lines shown (${allLogLines.length} total)`;
+    }
+    
+    function addLogLine(line) {
+        allLogLines.push(line);
+        
+        // Trim if too many
+        if (allLogLines.length > maxLines) {
+            allLogLines = allLogLines.slice(-maxLines);
+        }
+        
+        filterLogs();
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+    }
+    
+    function clearLogs() {
+        allLogLines = [];
+        document.getElementById('log-viewer').innerHTML = '';
+        document.getElementById('log-count').textContent = '0 lines';
+    }
+    
+    function updateConnectionStatus(connected) {
+        const status = document.getElementById('connection-status');
+        if (connected) {
+            status.textContent = '● Connected';
+            status.className = 'connection-status connected';
+        } else {
+            status.textContent = '● Disconnected';
+            status.className = 'connection-status disconnected';
+        }
+    }
+    
+    function connect() {
+        if (eventSource) {
+            eventSource.close();
+        }
+        
+        eventSource = new EventSource('/logs/stream');
+        
+        eventSource.onopen = () => {
+            updateConnectionStatus(true);
+        };
+        
+        eventSource.onmessage = (event) => {
+            if (event.data) {
+                addLogLine(event.data);
+            }
+        };
+        
+        eventSource.onerror = () => {
+            updateConnectionStatus(false);
+            setTimeout(connect, 5000);
+        };
+    }
+    
+    function reconnect() {
+        updateConnectionStatus(false);
+        document.getElementById('connection-status').textContent = 'Reconnecting...';
+        connect();
+    }
+    
+    // Load recent logs first, then connect to stream
+    fetch('/logs/recent')
+        .then(r => r.json())
+        .then(data => {
+            if (data.lines) {
+                data.lines.forEach(line => allLogLines.push(line));
+                filterLogs();
+            }
+            connect();
+        })
+        .catch(() => connect());
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        if (eventSource) eventSource.close();
+    });
+</script>
+{% endblock %}

@@ -7,6 +7,7 @@
     {
       "round": 1,
       "venue": "Australia",
+      "flag": "au.svg",
       "official_name": "Australian Grand Prix",
       "circuit": "Albert Park Circuit",
       "aliases": ["australia", "australian", "melbourne", "albert park"],
@@ -37,6 +38,7 @@
     {
       "round": 2,
       "venue": "China",
+      "flag": "cn.svg",
       "official_name": "Chinese Grand Prix",
       "circuit": "Shanghai International Circuit",
       "aliases": ["china", "chinese", "shanghai"],
@@ -67,6 +69,7 @@
     {
       "round": 3,
       "venue": "Japan",
+      "flag": "jp.svg",
       "official_name": "Japanese Grand Prix",
       "circuit": "Suzuka International Racing Course",
       "aliases": ["japan", "japanese", "suzuka"],
@@ -97,6 +100,7 @@
     {
       "round": 4,
       "venue": "Bahrain",
+      "flag": "bh.svg",
       "official_name": "Bahrain Grand Prix",
       "circuit": "Bahrain International Circuit",
       "aliases": ["bahrain", "sakhir"],
@@ -127,6 +131,7 @@
     {
       "round": 5,
       "venue": "Saudi Arabia",
+      "flag": "sa.svg",
       "official_name": "Saudi Arabian Grand Prix",
       "circuit": "Jeddah Corniche Circuit",
       "aliases": ["saudi", "jeddah"],
@@ -157,6 +162,7 @@
     {
       "round": 6,
       "venue": "Miami",
+      "flag": "us.svg",
       "official_name": "Miami Grand Prix",
       "circuit": "Miami International Autodrome",
       "aliases": ["miami", "florida"],
@@ -187,6 +193,7 @@
     {
 	  "round": 7,
 	  "venue": "Canada",
+    "flag": "ca.svg",
 	  "official_name": "Canadian Grand Prix",
 	  "circuit": "Circuit Gilles Villeneuve",
 	  "aliases": ["canada", "canadian", "montreal"],
@@ -217,6 +224,7 @@
     {
       "round": 8,
       "venue": "Monaco",
+      "flag": "mc.svg",
       "official_name": "Monaco Grand Prix",
       "circuit": "Circuit de Monaco",
       "aliases": ["monaco", "monte carlo"],
@@ -247,6 +255,7 @@
     {
       "round": 9,
       "venue": "Barcelona",
+      "flag": "es.svg",
       "official_name": "Spanish Grand Prix",
       "circuit": "Circuit de Barcelona-Catalunya",
       "aliases": ["spain", "spanish", "barcelona", "catalunya"],
@@ -277,6 +286,7 @@
     {
 	  "round": 10,
 	  "venue": "Austria",
+    "flag": "at.svg",
 	  "official_name": "Austrian Grand Prix",
 	  "circuit": "Red Bull Ring",
 	  "aliases": ["austria", "austrian", "spielberg", "redbull"],
@@ -307,6 +317,7 @@
     {
 	  "round": 11,
 	  "venue": "Great Britain",
+    "flag": "gb.svg",
 	  "official_name": "British Grand Prix",
 	  "circuit": "Silverstone Circuit",
 	  "aliases": ["britain", "british", "silverstone", "uk", "england"],
@@ -337,6 +348,7 @@
     {
       "round": 12,
       "venue": "Belgium",
+      "flag": "be.svg",
       "official_name": "Belgian Grand Prix",
       "circuit": "Circuit de Spa-Francorchamps",
       "aliases": ["belgium", "belgian", "spa", "francorchamps"],
@@ -367,6 +379,7 @@
     {
       "round": 13,
       "venue": "Hungary",
+      "flag": "hu.svg",
       "official_name": "Hungarian Grand Prix",
       "circuit": "Hungaroring",
       "aliases": ["hungary", "hungarian", "budapest", "hungaroring"],
@@ -397,6 +410,7 @@
     {
 	  "round": 14,
 	  "venue": "Netherlands",
+    "flag": "nl.svg",
 	  "official_name": "Dutch Grand Prix",
 	  "circuit": "Circuit Zandvoort",
 	  "aliases": ["netherlands", "dutch", "zandvoort", "holland"],
@@ -427,6 +441,7 @@
     {
       "round": 15,
       "venue": "Monza",
+      "flag": "it.svg",
       "official_name": "Italian Grand Prix",
       "circuit": "Autodromo Nazionale Monza",
       "aliases": ["italy", "italian", "monza"],
@@ -457,6 +472,7 @@
     {
       "round": 16,
       "venue": "Madrid",
+      "flag": "es.svg",
       "official_name": "Madrid Grand Prix",
       "circuit": "Madrid Street Circuit",
       "aliases": ["madrid"],
@@ -487,6 +503,7 @@
     {
       "round": 17,
       "venue": "Azerbaijan",
+      "flag": "az.svg",
       "official_name": "Azerbaijan Grand Prix",
       "circuit": "Baku City Circuit",
       "aliases": ["azerbaijan", "baku"],
@@ -517,6 +534,7 @@
     {
 	  "round": 18,
 	  "venue": "Singapore",
+    "flag": "sg.svg",
 	  "official_name": "Singapore Grand Prix",
 	  "circuit": "Marina Bay Street Circuit",
 	  "aliases": ["singapore", "marina bay"],
@@ -547,6 +565,7 @@
     {
 	  "round": 19,
 	  "venue": "Austin",
+    "flag": "us.svg",
 	  "official_name": "United States Grand Prix",
 	  "circuit": "Circuit of the Americas",
 	  "aliases": ["usa", "austin", "cota", "texas", "american"],
@@ -577,6 +596,7 @@
     {
       "round": 20,
       "venue": "Mexico",
+      "flag": "mx.svg",
       "official_name": "Mexican Grand Prix",
       "circuit": "Autódromo Hermanos Rodríguez",
       "aliases": ["mexico", "mexican"],
@@ -607,6 +627,7 @@
     {
 	  "round": 21,
 	  "venue": "Brazil",
+    "flag": "br.svg",
 	  "official_name": "Brazilian Grand Prix",
 	  "circuit": "Autódromo José Carlos Pace",
 	  "aliases": ["brazil", "brazilian", "interlagos", "sao paulo"],
@@ -637,6 +658,7 @@
     {
       "round": 22,
       "venue": "Las Vegas",
+      "flag": "us.svg",
       "official_name": "Las Vegas Grand Prix",
       "circuit": "Las Vegas Street Circuit",
       "aliases": ["vegas", "nevada"],
@@ -667,6 +689,7 @@
     {
   "round": 23,
   "venue": "Qatar",
+  "flag": "qa.svg",
   "official_name": "Qatar Grand Prix",
   "circuit": "Lusail International Circuit",
   "aliases": ["qatar", "lusail"],
@@ -697,6 +720,7 @@
     {
       "round": 24,
       "venue": "Abu Dhabi",
+      "flag": "ae.svg",
       "official_name": "Abu Dhabi Grand Prix",
       "circuit": "Yas Marina Circuit",
       "aliases": ["abu dhabi", "abudhabi", "yas marina"],

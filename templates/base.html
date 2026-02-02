@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>F1arr</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#e10600">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icon-180x180.png">
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/icon-16x16.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/assets/icon-512x512.png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Pull to refresh indicator -->
+    <div class="pull-indicator" id="pull-indicator">
+        <span class="pull-arrow">↓</span>
+        <span class="pull-text">Pull to refresh</span>
+    </div>
+
+    <!-- Main content wrapper for swipe gestures -->
+    <div class="content-wrapper" id="content-wrapper">
+        <!-- Next Race Banner -->
+        <div class="next-race-banner {{ 'race-now' if next_race.status == 'now' }}">
+            {% if next_race.flag %}
+            <div class="flag-avatar">
+                <img src="/flags/{{ next_race.flag }}" alt="{{ next_race.venue }} flag">
+            </div>
+            {% endif %}
+            <div class="race-info">
+                <div class="race-title">
+                    {% if next_race.status == 'now' %}
+                    <span class="live-badge">LIVE</span> Race Weekend
+                    {% else %}
+                    Next Race
+                    {% endif %}
+                </div>
+                <div class="race-venue">
+                    {{ next_race.venue }}
+                    {% if next_race.sprint_weekend %}<span class="sprint-badge">SPRINT</span>{% endif %}
+                </div>
+                {% if next_race.round %}
+                <div class="race-details">Round {{ next_race.round }} • {{ next_race.date }}</div>
+                {% endif %}
+            </div>
+            <div class="race-countdown">
+                {% if next_race.status == 'now' %}
+                    <div class="countdown-number">🏁</div>
+                    <div class="countdown-label">Now!</div>
+                {% elif next_race.days is not none %}
+                    <div class="countdown-number">{{ next_race.days }}</div>
+                    <div class="countdown-label">{{ 'day' if next_race.days == 1 else 'days' }} to go</div>
+                {% else %}
+                    <div class="countdown-label">{{ next_race.countdown }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="header-row">
+            <div class="status {{ 'running' if status.running else 'ready' }}">
+                {% if status.running %}⏳ Running: {{ status.command }}
+                {% else %}✅ Idle{% endif %}
+            </div>
+        </div>
+
+        <!-- Desktop Tabs (hidden on mobile) -->
+        <div class="tabs desktop-only">
+            <a href="/" class="tab {{ 'active' if active_tab == 'commands' }}">Commands</a>
+            <a href="/library" class="tab {{ 'active' if active_tab == 'library' }}">Library</a>
+            <a href="/settings-page" class="tab {{ 'active' if active_tab == 'settings' }}">Settings</a>
+            <a href="/stats" class="tab {{ 'active' if active_tab == 'stats' }}">Stats</a>
+            <a href="/calendar" class="tab {{ 'active' if active_tab == 'calendar' }}">Calendar</a>
+            <a href="/activity" class="tab {{ 'active' if active_tab == 'activity' }}">Activity</a>
+        </div>
+
+        <!-- Page Content -->
+        <div class="page-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- Bottom Navigation (mobile only) -->
+    <nav class="bottom-nav mobile-only">
+        <a href="/" class="bottom-nav-item {{ 'active' if active_tab == 'commands' }}">
+            <span class="bottom-nav-icon">⚡</span>
+            <span class="bottom-nav-label">Commands</span>
+        </a>
+        <a href="/library" class="bottom-nav-item {{ 'active' if active_tab == 'library' }}">
+            <img src="/assets/plex_svg/plextv-icon.svg" class="bottom-nav-icon-svg" alt="">
+            <span class="bottom-nav-label">Library</span>
+        </a>
+        <a href="/settings-page" class="bottom-nav-item {{ 'active' if active_tab == 'settings' }}">
+            <span class="bottom-nav-icon">⚙️</span>
+            <span class="bottom-nav-label">Settings</span>
+        </a>
+        <a href="/stats" class="bottom-nav-item {{ 'active' if active_tab == 'stats' }}">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Stats</span>
+        </a>
+        <a href="/calendar" class="bottom-nav-item {{ 'active' if active_tab == 'calendar' }}">
+            <span class="bottom-nav-icon">📅</span>
+            <span class="bottom-nav-label">Calendar</span>
+        </a>
+        <a href="/activity" class="bottom-nav-item {{ 'active' if active_tab == 'activity' }}">
+            <span class="bottom-nav-icon">🏎️</span>
+            <span class="bottom-nav-label">Activity</span>
+        </a>
+    </nav>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // ===== STICKY BANNER TOGGLE =====
+        const STICKY_BANNER = true;
+        // ================================
+        
+        const isRunning = {{ 'true' if status.running else 'false' }};
+        const currentTab = '{{ active_tab }}';
+        const tabs = ['commands', 'library', 'settings', 'stats', 'calendar', 'activity'];
+        const tabUrls = {
+            'commands': '/', 
+            'library': '/library', 
+            'settings': '/settings-page', 
+            'stats': '/stats', 
+            'calendar': '/calendar', 
+            'activity': '/activity'
+        };
+        
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW failed:', err));
+        }
+        
+        {% if status.running %}
+        // Don't auto-reload pages with live streams (activity, logs)
+        const noReloadPages = ['activity', 'logs'];        
+        if (!noReloadPages.includes(currentTab)) {
+            setTimeout(() => location.reload(), 3000);
+        }
+        {% endif %}
+        
+        // Apply sticky setting
+        document.addEventListener('DOMContentLoaded', function() {
+            const banner = document.querySelector('.next-race-banner');
+            if (banner && !STICKY_BANNER) {
+                banner.classList.add('no-sticky');
+            }
+            
+            // Add shadow when stuck
+            if (banner && STICKY_BANNER) {
+                const observer = new IntersectionObserver(
+                    ([e]) => banner.classList.toggle('stuck', e.intersectionRatio < 1),
+                    { threshold: [1], rootMargin: '-1px 0px 0px 0px' }
+                );
+                observer.observe(banner);
+            }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

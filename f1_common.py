@@ -121,6 +121,186 @@ PLEX_LIBRARY_ID = get_plex_library_id()
 PLEX_LIBRARY_NAME = get_plex_library_name()
 
 # =============================================================================
+
+# =============================================================================
+# CENTRALIZED LOGGING
+# =============================================================================
+
+from logging.handlers import RotatingFileHandler
+import threading
+
+# Global lock for thread-safe logging setup
+_logging_lock = threading.Lock()
+_logging_initialized = False
+
+
+class LogConfig:
+    """Logging configuration singleton."""
+    
+    # Default paths - overridden by setup_logging()
+    log_dir: Path = Path("/config/logs")
+    
+    # Log levels
+    console_level: int = logging.INFO
+    file_level: int = logging.DEBUG
+    
+    # File settings
+    max_bytes: int = 10 * 1024 * 1024  # 10MB
+    backup_count: int = 5
+    
+    # Debug mode
+    debug_mode: bool = False
+
+
+def setup_logging(
+    name: str = "f1",
+    log_dir: Optional[Path] = None,
+    console_level: int = logging.INFO,
+    file_level: int = logging.DEBUG,
+    debug_mode: bool = False,
+    force: bool = False
+) -> logging.Logger:
+    """
+    Centralized logging setup for all F1 scripts.
+    
+    Call this once at the start of each script. Subsequent calls
+    return the existing logger unless force=True.
+    
+    Args:
+        name: Logger name (usually "f1")
+        log_dir: Directory for log files (default: /config/logs)
+        console_level: Console output level
+        file_level: File output level  
+        debug_mode: Enable verbose debug logging
+        force: Force reconfiguration even if already set up
+    
+    Returns:
+        Configured root logger for the f1 hierarchy
+    
+    Usage:
+        from f1_common import setup_logging
+        
+        logger = setup_logging(debug_mode=True)
+        # or for module-specific logger:
+        logger = logging.getLogger("f1.watcher")
+    """
+    global _logging_initialized
+    
+    with _logging_lock:
+        # Return existing logger if already configured
+        if _logging_initialized and not force:
+            return logging.getLogger("f1")
+        
+        # Determine log directory
+        if log_dir is None:
+            # Try config dir first, fall back to script dir
+            config_log_dir = CONFIG_DIR / "logs"
+            if CONFIG_DIR.exists() or str(CONFIG_DIR).startswith("/config"):
+                log_dir = config_log_dir
+            else:
+                log_dir = SCRIPT_DIR / "logs"
+        
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Update config
+        LogConfig.log_dir = log_dir
+        LogConfig.console_level = console_level
+        LogConfig.file_level = file_level
+        LogConfig.debug_mode = debug_mode
+        
+        # Get or create the f1 root logger
+        logger = logging.getLogger("f1")
+        logger.setLevel(logging.DEBUG)
+        
+        # Clear existing handlers
+        logger.handlers.clear()
+
+        # Prevent propagation to root logger (avoids double logging)
+        logger.propagate = False        
+
+        # Formatter with module identification
+        detailed_formatter = logging.Formatter(        
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        
+        # Simple formatter for console
+        console_formatter = logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(message)s",
+            datefmt="%H:%M:%S"
+        )
+        
+        # Console handler
+        console = logging.StreamHandler()
+        console.setLevel(logging.DEBUG if debug_mode else console_level)
+        console.setFormatter(console_formatter)
+        logger.addHandler(console)
+        
+        # Main log file (rotating)
+        main_log = log_dir / "f1.log"
+        try:
+            file_handler = RotatingFileHandler(
+                main_log,
+                maxBytes=LogConfig.max_bytes,
+                backupCount=LogConfig.backup_count,
+                encoding="utf-8"
+            )
+            file_handler.setLevel(file_level)
+            file_handler.setFormatter(detailed_formatter)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            logger.warning(f"Could not create log file {main_log}: {e}")
+        
+        # Debug log (separate, more verbose) - only in debug mode
+        if debug_mode:
+            debug_log = log_dir / "f1_debug.log"
+            try:
+                debug_formatter = logging.Formatter(
+                    "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s:%(funcName)s:%(lineno)d: %(message)s",
+                    datefmt="%Y-%m-%d %H:%M:%S"
+                )
+                debug_handler = RotatingFileHandler(
+                    debug_log,
+                    maxBytes=50 * 1024 * 1024,  # 50MB for debug
+                    backupCount=3,
+                    encoding="utf-8"
+                )
+                debug_handler.setLevel(logging.DEBUG)
+                debug_handler.setFormatter(debug_formatter)
+                logger.addHandler(debug_handler)
+            except Exception as e:
+                logger.warning(f"Could not create debug log file: {e}")
+        
+        _logging_initialized = True
+        
+        # Log startup
+        logger.info(f"Logging initialized: {log_dir}")
+        if debug_mode:
+            logger.debug("Debug mode enabled")
+        
+        return logger
+
+
+def get_logger(name: str = None) -> logging.Logger:
+    """
+    Get a logger in the f1 hierarchy.
+    
+    Args:
+        name: Optional sub-logger name (e.g., "watcher", "sort")
+              If None, returns the root f1 logger
+    
+    Returns:
+        Logger instance
+    
+    Usage:
+        logger = get_logger("watcher")  # Returns f1.watcher logger
+        logger = get_logger()           # Returns f1 logger
+    """
+    if name:
+        return logging.getLogger(f"f1.{name}")
+    return logging.getLogger("f1")
+
 # SESSION DEFINITIONS (Single Source of Truth)
 # =============================================================================
 

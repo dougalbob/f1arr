@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="calendar-header">
+        <button onclick="changeYear(-1)" class="small secondary">◀ Prev</button>
+        <h2 id="calendar-year">{{ year }} Season</h2>
+        <button onclick="changeYear(1)" class="small secondary">Next ▶</button>
+    </div>
+    
+    <div class="calendar-legend">
+        <span class="legend-item"><span class="legend-dot past"></span> Completed</span>
+        <span class="legend-item"><span class="legend-dot current"></span> This Weekend</span>
+        <span class="legend-item"><span class="legend-dot future"></span> Upcoming</span>
+    </div>
+    
+    <div class="calendar-grid" id="calendar-grid">
+        <!-- Calendar months will be rendered here -->
+    </div>
+</div>
+
+<!-- Race Detail Modal -->
+<div class="modal-overlay" id="race-modal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3 id="modal-title">Race Details</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" id="modal-body">
+            <!-- Race details loaded here -->
+        </div>
+        <div class="modal-footer" id="modal-footer" style="display: none;">
+            <button onclick="closeModal()" class="secondary">Cancel</button>
+            <button onclick="downloadSelectedFromCalendar()" class="success" id="calendar-download-btn">
+                ⬇️ Download Selected (<span id="calendar-selected-count">0</span>)
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentYear = {{ year }};
+    const calendarData = {{ calendar_data | tojson }};
+    const libraryStatus = {{ library_status | tojson }};
+    const flagData = {{ flag_data | tojson }};
+    const today = new Date();
+    let calendarSelectedSessions = new Set();
+    let currentRoundNum = null;
+    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    
+    function renderCalendar() {
+        const grid = document.getElementById('calendar-grid');
+        const races = calendarData[currentYear] || [];
+        
+        // Build race lookup by date
+        const racesByDate = {};
+        races.forEach(race => {
+            if (race.date) {
+                racesByDate[race.date] = race;
+                // Also mark weekend days (Fri, Sat before race Sunday)
+                const raceDate = new Date(race.date);
+                for (let i = 1; i <= 2; i++) {
+                    const d = new Date(raceDate);
+                    d.setDate(d.getDate() - i);
+                    const key = d.toISOString().split('T')[0];
+                    if (!racesByDate[key]) {
+                        racesByDate[key] = { ...race, isWeekend: true };
+                    }
+                }
+            }
+        });
+        
+        let html = '';
+        
+        // Render each month
+        for (let month = 0; month < 12; month++) {
+            const firstDay = new Date(currentYear, month, 1);
+            const lastDay = new Date(currentYear, month + 1, 0);
+            const startPadding = firstDay.getDay(); // 0 = Sunday
+            
+            html += `<div class="calendar-month">`;
+            html += `<div class="month-header">${monthNames[month]}</div>`;
+            html += `<div class="month-days-header">
+                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+            </div>`;
+            html += `<div class="month-days">`;
+            
+            // Padding for first week
+            for (let i = 0; i < startPadding; i++) {
+                html += `<span class="day empty"></span>`;
+            }
+            
+            // Days of month
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const dateStr = `${currentYear}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const race = racesByDate[dateStr];
+                const dateObj = new Date(currentYear, month, day);
+                
+                let classes = ['day'];
+                let tooltip = '';
+                let onclick = '';
+                
+                if (race) {
+                    const raceDate = new Date(race.date);
+                    const isPast = raceDate < today;
+                    const isToday = dateStr === today.toISOString().split('T')[0];
+                    const isRaceWeekend = Math.abs(raceDate - dateObj) <= 2 * 24 * 60 * 60 * 1000;
+                    
+                    // Check if current weekend
+                    const weekendStart = new Date(raceDate);
+                    weekendStart.setDate(weekendStart.getDate() - 2);
+                    const isCurrentWeekend = today >= weekendStart && today <= raceDate;
+                    
+                    classes.push('race');
+                    if (isCurrentWeekend) {
+                        classes.push('current');
+                    } else if (isPast) {
+                        classes.push('past');
+                    } else {
+                        classes.push('future');
+                    }
+                    
+                    if (race.isWeekend) {
+                        classes.push('weekend');
+                    } else {
+                        classes.push('race-day');
+                    }
+                    
+                    const sprintTag = race.sprint_weekend ? ' 🏃' : '';
+                    tooltip = `Round ${race.number}: ${race.venue}${sprintTag}`;
+                    onclick = `onclick="showRaceDetails(${race.number})"`;
+                }
+                
+                html += `<span class="${classes.join(' ')}" title="${tooltip}" ${onclick}>${day}</span>`;
+            }
+            
+            html += `</div></div>`;
+        }
+        
+        grid.innerHTML = html;
+        document.getElementById('calendar-year').textContent = `${currentYear} Season`;
+    }
+    
+    function changeYear(delta) {
+        const years = Object.keys(calendarData).map(Number).sort();
+        const currentIndex = years.indexOf(currentYear);
+        const newIndex = currentIndex + delta;
+        
+        if (newIndex >= 0 && newIndex < years.length) {
+            currentYear = years[newIndex];
+            fetch(`/calendar-data?year=${currentYear}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.library_status) {
+                        Object.assign(libraryStatus, data.library_status);
+                    }
+                    renderCalendar();
+                })
+                .catch(() => renderCalendar());
+        }
+    }
+    
+    function showRaceDetails(roundNumber) {
+        const races = calendarData[currentYear] || [];
+        const race = races.find(r => r.number === roundNumber);
+        
+        if (!race) return;
+        
+        currentRoundNum = roundNumber;
+        calendarSelectedSessions.clear();
+        
+        const raceDate = new Date(race.date);
+        const isPast = raceDate < today;
+        const status = libraryStatus[roundNumber] || {};
+        const flag = flagData[currentYear] ? flagData[currentYear][roundNumber] : '';
+        
+        // Format date as DD-MM-YYYY
+        const formattedDate = race.date.split('-').reverse().join('-');
+        const sprintBadge = race.sprint_weekend ? '<span class="sprint-badge">SPRINT</span>' : '';
+        
+        let html = `
+            <div class="race-detail-header">
+                <div class="race-detail-flag">
+                    ${flag ? `<img src="/flags/${flag}" class="modal-flag-avatar" alt="">` : ''}
+                </div>
+                <div class="race-detail-info">
+                    <div class="race-round">Round ${race.number}</div>
+                    <div class="race-venue">${race.venue} ${sprintBadge}</div>
+                    <div class="race-date">${formattedDate}</div>
+                </div>
+            </div>
+        `;
+        
+        if (isPast) {
+            const grabbed = status.grabbed || 0;
+            const total = status.total || 0;
+            const pct = total > 0 ? Math.round(grabbed / total * 100) : 0;
+            
+            html += `
+                <div class="race-progress">
+                    <div class="race-progress-label">Library Status: ${grabbed}/${total} sessions (${pct}%)</div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" style="width: ${pct}%"></div>
+                    </div>
+                </div>
+            `;
+            
+            if (status.sessions) {
+                const hasMissing = status.sessions.some(s => !s.exists);
+                
+                html += `<div class="race-sessions-list">`;
+                status.sessions.forEach(s => {
+                    if (s.exists) {
+                        html += `<div class="library-session exists">✅ ${s.name}</div>`;
+                    } else {
+                        const sessionKey = `${currentYear}_R${String(roundNumber).padStart(2,'0')}_${s.type}`;
+                        html += `
+                            <div class="library-session missing">
+                                <label class="session-checkbox-label">
+                                    <input type="checkbox" 
+                                           class="session-checkbox calendar-session-cb" 
+                                           data-session-key="${sessionKey}"
+                                           data-round="${roundNumber}"
+                                           data-session="${s.type}"
+                                           data-name="${s.name}"
+                                           onchange="toggleCalendarSession(this)">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="session-name">❌ ${s.name}</span>
+                                </label>
+                            </div>
+                        `;
+                    }
+                });
+                html += `</div>`;
+                
+                document.getElementById('modal-footer').style.display = hasMissing ? 'flex' : 'none';
+            }
+        } else {
+            const daysUntil = Math.ceil((raceDate - today) / (1000 * 60 * 60 * 24));
+            html += `
+                <div class="race-countdown-detail">
+                    <div class="countdown-big">${daysUntil}</div>
+                    <div class="countdown-label">days to go</div>
+                </div>
+            `;
+            document.getElementById('modal-footer').style.display = 'none';
+        }
+        
+        document.getElementById('modal-title').textContent = race.venue;
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('race-modal').classList.add('active');
+        updateCalendarDownloadBtn();
+    }
+    
+    function toggleCalendarSession(checkbox) {
+        const key = checkbox.dataset.sessionKey;
+        const data = {
+            key: key,
+            round: checkbox.dataset.round,
+            session: checkbox.dataset.session,
+            name: checkbox.dataset.name
+        };
+        
+        if (checkbox.checked) {
+            calendarSelectedSessions.add(JSON.stringify(data));
+        } else {
+            calendarSelectedSessions.forEach(s => {
+                if (JSON.parse(s).key === key) {
+                    calendarSelectedSessions.delete(s);
+                }
+            });
+        }
+        updateCalendarDownloadBtn();
+    }
+    
+    function updateCalendarDownloadBtn() {
+        const count = calendarSelectedSessions.size;
+        document.getElementById('calendar-selected-count').textContent = count;
+        document.getElementById('calendar-download-btn').disabled = count === 0;
+    }
+    
+    function downloadSelectedFromCalendar() {
+        if (calendarSelectedSessions.size === 0) return;
+        
+        const selections = Array.from(calendarSelectedSessions).map(s => JSON.parse(s));
+        
+        fetch('/download-selected', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                season: currentYear,
+                selections: selections
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            showToast(`Starting download of ${selections.length} sessions...`, 'success');
+            closeModal();
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 1500);
+        })
+        .catch(err => {
+            showToast('Failed to start download', 'error');
+        });
+    }
+    
+    function closeModal(event) {
+        if (!event || event.target.classList.contains('modal-overlay')) {
+            document.getElementById('race-modal').classList.remove('active');
+            calendarSelectedSessions.clear();
+        }
+    }
+    
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeModal();
+    });
+    
+    window.addEventListener('load', renderCalendar);
+</script>
+{% endblock %}

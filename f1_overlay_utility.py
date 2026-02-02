@@ -10,7 +10,7 @@ Usage:
     f1-overlay test "/data/media/Motorssport/F1/2025/Round 12 Great Britain/25R12E15 Great Britain Qualifying"
     
     # Test with a specific scale factor
-    f1-overlay test "/path/to/folder" --scale 2.5
+    f1-overlay test "/path/to/folder" --scale 1.2
     
     # Apply to a single folder (overwrites existing artwork)
     f1-overlay apply "/path/to/folder"
@@ -75,7 +75,7 @@ F1_FANART_DIR = SCRIPT_DIR / "assets" / "f1_fanart"
 F1_POSTERS_DIR = SCRIPT_DIR / "assets" / "f1_posters"
 
 # Default scale factor (can be overridden via command line)
-DEFAULT_SCALE_FACTOR = 2.0
+DEFAULT_SCALE_FACTOR = 1.0
 
 # Target sizes for resize
 POSTER_SIZE = (1000, 1500)

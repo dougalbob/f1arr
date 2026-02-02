@@ -1,0 +1,342 @@
+================================================================================
+AI CONTEXTUAL NOTES: F1arr WebUI Refactoring Session
+Date Started: 01 February 2025
+Last Updated: 01 February 2025 22:10
+================================================================================
+
+PROJECT OVERVIEW
+----------------
+F1arr - Docker container automating F1 content download/sorting to Plex
+Scripts location: /mnt/user/data/pythonscripts/motorsport/f1arr/
+Reference app: /mnt/user/data/pythonscripts/motorsport/motogparr/
+Container port: 5678
+
+OBJECTIVE
+---------
+Refactor f1arr_webui.py from monolithic single-file with embedded HTML/CSS/JS
+to match motogparr's clean template-based Flask structure.
+
+================================================================================
+COMPLETED WORK - ALL PHASES DONE
+================================================================================
+
+PHASE 1: Directory Structure ✅
+-------------------------------
+Created:
+- templates/
+- static/css/
+- static/js/
+
+PHASE 2: Template Files ✅ (8 files, 86KB total)
+------------------------------------------------
+1. base.html (7.6KB) - Navigation, banner, toast container
+2. dashboard.html (5KB) - Commands tab with quick actions
+3. library.html (12.8KB) - Library view with flags, checkboxes
+4. settings.html (17.9KB) - Grabbing & App Config tabs
+5. logs.html (5KB) - Live log viewer with SSE
+6. activity.html (18.6KB) - Activity feed + SABnzbd monitor
+7. calendar.html (13.3KB) - Calendar view with race details
+8. stats.html (5.8KB) - Statistics and graphs
+
+PHASE 3: Static Files ✅
+------------------------
+1. static/css/style.css (43KB) - Full F1 theme (#e10600)
+2. static/js/app.js (5.6KB) - Shared JavaScript
+3. static/js/sw.js (2KB) - Service worker for PWA
+
+PHASE 4: Refactored f1arr_webui.py ✅ (38.7KB, 1160 lines)
+----------------------------------------------------------
+New file: f1arr_webui.py (replaces f1_webui.py)
+
+Routes implemented:
+- GET  /                    - Dashboard (commands tab)
+- GET  /library             - Library page
+- GET  /settings-page       - Settings page
+- GET  /logs                - Logs page
+- GET  /activity            - Activity feed page
+- GET  /calendar            - Calendar page
+- GET  /stats               - Statistics page
+- POST /run                 - Execute commands
+- GET/POST /settings        - Grabbing settings API
+- GET  /status              - Command status API
+- GET  /library-status      - Library scan API
+- GET/POST /app-config      - App configuration API
+- GET  /test-connections    - Test Prowlarr/SABnzbd/Plex
+- GET  /failed-sessions     - Get failed searches
+- POST /download-selected   - Download missing sessions
+- GET  /calendar-data       - Calendar data API
+- GET  /logs/stream         - SSE log streaming
+- GET  /logs/recent         - Recent logs JSON
+- GET  /activity/stream     - SSE activity streaming
+- GET  /api/sabnzbd/queue   - SABnzbd queue (category: f1)
+- GET  /flags/<path>        - Flag SVG files
+- GET  /manifest.json       - PWA manifest
+- GET  /sw.js               - Service worker
+- GET  /assets/<path>       - Static assets
+
+================================================================================
+FILE STRUCTURE (COMPLETE)
+================================================================================
+
+f1arr/
+├── f1arr_webui.py              ✅ NEW (38.7KB, 1160 lines)
+├── f1_webui.py                 OLD (69KB - can be removed/renamed)
+├── templates/
+│   ├── base.html               ✅ (7.6KB)
+│   ├── dashboard.html          ✅ (5KB)
+│   ├── library.html            ✅ (12.8KB)
+│   ├── settings.html           ✅ (17.9KB)
+│   ├── logs.html               ✅ (5KB)
+│   ├── activity.html           ✅ (18.6KB)
+│   ├── calendar.html           ✅ (13.3KB)
+│   └── stats.html              ✅ (5.8KB)
+├── static/
+│   ├── css/
+│   │   └── style.css           ✅ (43KB)
+│   └── js/
+│       ├── app.js              ✅ (5.6KB)
+│       └── sw.js               ✅ (2KB)
+└── assets/
+    ├── f1_icon.png             ✅ (existing)
+    ├── flag_assets_svg/        ✅ (existing)
+    ├── plex_svg/               ✅ (existing)
+    └── DejaVuSans-Bold.ttf     ✅ (existing)
+
+================================================================================
+REMAINING/OPTIONAL TASKS
+================================================================================
+
+1. CREATE PWA ICONS (optional but recommended):
+   - favicon.ico
+   - icon-16x16.png
+   - icon-32x32.png
+   - icon-180x180.png
+   - icon-192x192.png
+   - icon-512x512.png
+
+2. UPDATE DOCKERFILE (if needed):
+   - Ensure templates/ and static/ are copied
+   - Update entrypoint if script name changed
+
+3. RENAME OLD FILE (when ready):
+   mv f1_webui.py f1_webui.py.old
+
+4. TEST THE NEW UI:
+   - Run: python3 f1arr_webui.py
+   - Visit: http://localhost:5678
+   - Test all tabs and functionality
+
+5. UPDATE ENTRYPOINT (if script name changed):
+   - entrypoint.sh may reference f1_webui.py
+   - Update to f1arr_webui.py
+
+================================================================================
+F1-SPECIFIC ADAPTATIONS
+================================================================================
+
+Color Scheme:
+- Primary: #e10600 (F1 Red)
+- Hover: #ff1a1a
+- Gradient: #e10600 → #8b0000
+
+SABnzbd Category: "f1"
+
+Session Types: 26 total (vs MotoGP's ~12)
+- Includes Sprint Qualifying, Sprint, Ted's notebooks, Jolyon Palmer's Analysis
+
+Sprint Weekend Handling:
+- FP3 replaced by Sprint sessions
+- Sprint badge displayed throughout UI
+
+Log File: /config/logs/f1.log
+
+================================================================================
+SUMMARY
+================================================================================
+
+BEFORE:
+- f1_webui.py: 69KB monolithic file with embedded HTML/CSS/JS
+
+AFTER:
+- f1arr_webui.py: 38.7KB (Flask routes only)
+- templates/: 86KB (8 template files)
+- static/css/style.css: 43KB
+- static/js/: 7.6KB (app.js + sw.js)
+- Total: ~175KB across multiple organized files
+
+BENEFITS:
+- Clean separation of concerns
+- Easy to modify styles without touching Python
+- Easy to modify templates without touching Python
+- Mobile-first responsive design
+- PWA support
+- Activity feed with download lifecycle visualization
+- SABnzbd queue monitoring
+- Live log streaming with SSE
+- Toast notifications
+- Swipe gestures and pull-to-refresh on mobile
+
+
+
+================================================================================
+OUTSTANDING ISSUE: CENTRALIZED LOGGING NOT YET IMPLEMENTED IN F1 SCRIPTS
+================================================================================
+Date: 01 February 2025
+
+PROBLEM SUMMARY
+---------------
+The Activity Feed and Live Log Viewer on the Activity tab are not working because:
+1. The log file (/config/logs/f1.log) is not being created
+2. The F1 scripts (f1_grabber.py, f1_scheduler.py, f1_sort.py, f1_watcher.py) 
+   still use legacy per-script logging with logging.basicConfig()
+3. They need to be updated to use the new centralized logging from f1_common.py
+
+WHAT HAS BEEN DONE
+------------------
+1. Added centralized logging functions to f1_common.py (lines 126-303):
+   - setup_logging() - initializes the logging system
+   - get_logger() - returns a logger in the f1.* hierarchy
+   - LogConfig class - configuration singleton
+   - Creates rotating log file at /config/logs/f1.log
+
+2. The logging code was adapted from motogp_common.py which works correctly
+
+WHAT STILL NEEDS TO BE DONE
+---------------------------
+Each of these scripts needs to be updated:
+
+1. f1_scheduler.py (PRIORITY - this is the main entry point)
+2. f1_grabber.py
+3. f1_sort.py  
+4. f1_watcher.py
+5. f1_discord.py (if it logs)
+6. f1_plex_tagger.py (if it logs)
+
+FOR EACH SCRIPT, THE CHANGES ARE:
+
+A) Update imports - add setup_logging and get_logger:
+   
+   FROM:
+   ```python
+   import logging
+   To
+   import logging
+   from f1_common import setup_logging, get_logger
+
+B) Remove the old setup_logging() function (each script has its own)
+
+REMOVE code like this:
+def setup_logging():
+    """Setup logging configuration."""
+    log_dir = Path("/config/logs")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "f1_scheduler.log"
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+    return log_file
+C) Add module logger and init function:
+
+ADD after imports:
+# Module logger - will be configured by init_logging()
+logger = get_logger("scheduler")  # or "grabber", "sort", "watcher" etc.
+
+def init_logging(verbose: bool = False):
+    """Initialize logging for this script."""
+    setup_logging(debug_mode=verbose)
+    logger.info("F1 Scheduler initialized")  # adjust message per script
+
+D) Update main() to call init_logging():
+
+CHANGE:
+def main():
+    log_file = setup_logging()
+TO:
+def main():
+    init_logging()
+
+E) Replace any logging.info/debug/error calls with logger.info/debug/error:
+
+CHANGE: logging.info("message")
+TO: logger.info("message")
+
+REFERENCE: MOTOGP_GRABBER.PY PATTERN
+From line 79 of motogp_grabber.py:
+# Import from common module - including centralized logging
+from motogp_common import (
+    setup_logging, get_logger,
+    SessionType, RaceClass,
+    build_prefix, parse_prefix, get_session_from_element,
+    load_calendar, get_round_by_number, has_session_times,
+    identify_round, classify_session, detect_race_class,
+    filter_releases, parse_release_title,
+    DEFAULT_DESIRED_SESSIONS, CORE_SESSIONS,
+    get_desired_sessions,  
+    SESSION_TO_CALENDAR_KEY, CALENDAR_KEY_TO_SESSION, CALENDAR_KEY_TO_DAY,
+    get_config_dir, get_library_path,
+)
+
+# ... other imports ...
+
+# Module logger - will be configured by init_logging()
+logger = get_logger("grabber")
+
+def init_logging(verbose: bool = False):
+    """Initialize logging for grabber script."""
+    setup_logging(debug_mode=verbose)
+    logger.info("MotoGP Grabber initialized")
+
+CURRENT STATE OF F1 SCRIPTS
+f1_scheduler.py:
+
+Line 15: import logging
+Line 67-85: def setup_logging() with logging.basicConfig()
+Line 319: log_file = setup_logging()
+f1_grabber.py:
+
+Line 208: import logging
+Line 330-346: def setup_logging(verbose) with logging.basicConfig()
+Line 1669: setup_logging(verbose)
+LOG FILE LOCATION
+The centralized logging writes to: /config/logs/f1.log
+Inside Docker container: /config/logs/f1.log
+On Unraid host: /mnt/user/appdata/f1arr/logs/f1.log
+
+The f1arr_webui.py expects the log at:
+
+LOG_FILE = CONFIG_DIR / "logs" / "f1.log"
+QUICK FIX OPTION (if full refactor not possible)
+As a minimum, update f1_scheduler.py since it's the main entry point that
+starts both the WebUI and scheduler. Add these lines near the top after imports:
+
+from f1_common import setup_logging, get_logger
+
+# Initialize centralized logging immediately
+setup_logging()
+logger = get_logger("scheduler")
+
+Then rebuild the container:
+cd /mnt/user/data/pythonscripts/motorsport/f1arr
+docker stop f1arr && docker rm f1arr
+docker build -t f1arr:latest .
+docker run -d --name f1arr --network downloads -p 5678:5678 \
+  -v /mnt/user/data/media:/media \
+  -v /mnt/user/data/downloads:/downloads \
+  -v /mnt/user/appdata/f1arr:/config \
+  -e TZ=Europe/London -e PYTHONUNBUFFERED=1 \
+  --restart unless-stopped f1arr:latest
+
+VERIFICATION
+After fixing, check:
+
+ls -la /mnt/user/appdata/f1arr/logs/ (should show f1.log)
+docker logs f1arr | head -30 (should show "Logging initialized: /config/logs")
+Visit Activity tab - should show live log updates
+================================================================================
+END OF LOGGING ISSUE NOTES

@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 LABEL org.opencontainers.image.source="https://github.com/dougalbob/f1arr"
 LABEL org.opencontainers.image.description="F1 Automated Recording & Retrieval - Grabs and organizes F1 sessions for Plex"
-LABEL org.opencontainers.image.version="1.1.0"
+LABEL org.opencontainers.image.version="1.2.0"
 
 # Set timezone
 ENV TZ=Europe/London
@@ -34,7 +34,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Create app directory structure
 WORKDIR /app
-RUN mkdir -p /app/config_defaults /app/assets /app/utils
+RUN mkdir -p /app/config_defaults /app/assets /app/utils /app/templates /app/static
 
 # Copy utils module
 COPY utils/ /app/utils/
@@ -48,10 +48,14 @@ COPY f1_plex_tagger.py /app/
 COPY f1_scheduler.py /app/
 COPY f1_sort.py /app/
 COPY f1_watcher.py /app/
-COPY f1_webui.py /app/
+COPY f1arr_webui.py /app/
 COPY entrypoint.sh /app/
 
-# Copy assets (fonts, fanart, posters, icon)
+# Copy templates and static files for WebUI
+COPY templates/ /app/templates/
+COPY static/ /app/static/
+
+# Copy assets (fonts, fanart, posters, icon, flags)
 COPY assets/ /app/assets/
 
 # Copy default config (calendars) to defaults folder

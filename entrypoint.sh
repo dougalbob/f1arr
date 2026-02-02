@@ -12,6 +12,7 @@ echo "================================================"
 
 # Ensure config directory exists
 mkdir -p "${CONFIG_DIR}"
+mkdir -p "${CONFIG_DIR}/logs"
 
 # Copy calendar files if they don't exist (first run)
 for calendar in /app/config_defaults/f1_*.json; do
@@ -71,10 +72,13 @@ plex:
   token: ""        # See: https://support.plex.tv/articles/204059436
   library_id: ""   # Plex library section ID (see instructions above)
   library_name: "Motorsport - F1"  # Display name of your F1 library in Plex
+  path_mapping:
+    container: "/media"      # Path as seen by f1arr
+    plex: "/data/media"      # Path as seen by Plex
 
 library:
   # Container paths - must match your volume mounts!
-  f1_path: "/media/F1"              # Where F1 content is stored (inside container)
+  f1_path: "/media/Motorsport/F1"              # Where F1 content is stored (inside container)
   downloads_path: "/downloads/complete/f1"  # Where SABnzbd puts completed F1 downloads
 
 discord:
@@ -106,7 +110,7 @@ echo "================================================"
 
 # Start WebUI in background
 echo "Starting WebUI..."
-$PYTHON "$SCRIPT_DIR/f1_webui.py" &
+$PYTHON "$SCRIPT_DIR/f1arr_webui.py" &
 WEBUI_PID=$!
 echo "  WebUI started (PID: $WEBUI_PID)"
 
