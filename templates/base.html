@@ -69,8 +69,8 @@
 
         <!-- Desktop Tabs (hidden on mobile) -->
         <div class="tabs desktop-only">
-            <a href="/" class="tab {{ 'active' if active_tab == 'commands' }}">Commands</a>
-            <a href="/library" class="tab {{ 'active' if active_tab == 'library' }}">Library</a>
+            <a href="/" class="tab {{ 'active' if active_tab == 'home' }}">Home</a>
+            <a href="/library" class="tab {{ 'active' if active_tab == 'download' }}">Download</a>
             <a href="/settings-page" class="tab {{ 'active' if active_tab == 'settings' }}">Settings</a>
             <a href="/stats" class="tab {{ 'active' if active_tab == 'stats' }}">Stats</a>
             <a href="/calendar" class="tab {{ 'active' if active_tab == 'calendar' }}">Calendar</a>
@@ -85,13 +85,13 @@
 
     <!-- Bottom Navigation (mobile only) -->
     <nav class="bottom-nav mobile-only">
-        <a href="/" class="bottom-nav-item {{ 'active' if active_tab == 'commands' }}">
-            <span class="bottom-nav-icon">⚡</span>
-            <span class="bottom-nav-label">Commands</span>
+        <a href="/" class="bottom-nav-item {{ 'active' if active_tab == 'home' }}">
+            <span class="bottom-nav-icon">🏠</span>
+            <span class="bottom-nav-label">Home</span>
         </a>
-        <a href="/library" class="bottom-nav-item {{ 'active' if active_tab == 'library' }}">
-            <img src="/assets/plex_svg/plextv-icon.svg" class="bottom-nav-icon-svg" alt="">
-            <span class="bottom-nav-label">Library</span>
+        <a href="/library" class="bottom-nav-item {{ 'active' if active_tab == 'download' }}">
+            <span class="bottom-nav-icon">⬇️</span>
+            <span class="bottom-nav-label">Download</span>
         </a>
         <a href="/settings-page" class="bottom-nav-item {{ 'active' if active_tab == 'settings' }}">
             <span class="bottom-nav-icon">⚙️</span>
@@ -114,17 +114,42 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- Admin Password Modal -->
+    <div class="modal-overlay" id="admin-modal" onclick="closeAdminModal(event)">
+        <div class="modal-content modal-small" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>🔐 Admin Access</h3>
+                <button class="modal-close" onclick="closeAdminModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>Enter admin password to access configuration:</p>
+                <div class="form-group">
+                    <input type="password" id="admin-password" placeholder="Password" onkeypress="if(event.key==='Enter')checkAdminPassword()">
+                </div>
+                <p class="admin-error" id="admin-error" style="display:none;">Incorrect password</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeAdminModal()" class="secondary">Cancel</button>
+                <button onclick="checkAdminPassword()" class="success">Submit</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== STICKY BANNER TOGGLE =====
         const STICKY_BANNER = true;
         // ================================
         
+        // Plex brand colors for reference
+        const PLEX_GAMBOGE = '#e5a00d';
+        const PLEX_SHARK = '#282a2d';
+        
         const isRunning = {{ 'true' if status.running else 'false' }};
         const currentTab = '{{ active_tab }}';
-        const tabs = ['commands', 'library', 'settings', 'stats', 'calendar', 'activity'];
+        const tabs = ['home', 'download', 'settings', 'stats', 'calendar', 'activity'];
         const tabUrls = {
-            'commands': '/', 
-            'library': '/library', 
+            'home': '/', 
+            'download': '/library', 
             'settings': '/settings-page', 
             'stats': '/stats', 
             'calendar': '/calendar', 
@@ -162,6 +187,49 @@
                 observer.observe(banner);
             }
         });
+        
+        // Admin modal functions
+        let adminCallback = null;
+        
+        function showAdminModal(callback) {
+            adminCallback = callback;
+            document.getElementById('admin-password').value = '';
+            document.getElementById('admin-error').style.display = 'none';
+            document.getElementById('admin-modal').classList.add('active');
+            document.getElementById('admin-password').focus();
+        }
+        
+        function closeAdminModal(event) {
+            if (!event || event.target.classList.contains('modal-overlay')) {
+                document.getElementById('admin-modal').classList.remove('active');
+                adminCallback = null;
+            }
+        }
+        
+        function checkAdminPassword() {
+            const password = document.getElementById('admin-password').value;
+            
+            fetch('/verify-admin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({password: password})
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.valid) {
+                    closeAdminModal();
+                    sessionStorage.setItem('adminAuth', 'true');
+                    if (adminCallback) adminCallback();
+                } else {
+                    document.getElementById('admin-error').style.display = 'block';
+                    document.getElementById('admin-password').value = '';
+                }
+            });
+        }
+        
+        function isAdminAuthed() {
+            return sessionStorage.getItem('adminAuth') === 'true';
+        }
     </script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     {% block scripts %}{% endblock %}

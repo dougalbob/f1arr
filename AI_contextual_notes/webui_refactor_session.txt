@@ -340,3 +340,90 @@ docker logs f1arr | head -30 (should show "Logging initialized: /config/logs")
 Visit Activity tab - should show live log updates
 ================================================================================
 END OF LOGGING ISSUE NOTES
+
+================================================================================
+UI REFINEMENTS - 02 February 2025
+================================================================================
+
+CHANGES MADE THIS SESSION
+-------------------------
+
+1. NAVIGATION CHANGES
+   - Renamed "Commands" tab to "Home" (icon: 🏠)
+   - Renamed "Library" tab to "Download" (icon: ⬇️)
+   - Updated active_tab values: "commands" → "home", "library" → "download"
+
+2. HOME TAB (formerly Commands)
+   - Simplified to welcome message and navigation hints
+   - Removed Backfill Tools section
+   - Removed Overlay Tools section (moved to Settings)
+   - Kept Quick Status with command output display
+
+3. DOWNLOAD TAB (formerly Library)
+   - Changed heading to "Download New Content" with Plex Gamboge color (#e5a00d)
+   - Increased Plex SVG logo size by 50% (.plex-logo-wide-large)
+   - Added Expand All / Collapse All buttons for rounds
+   - Updated terminology: "sessions" → "episodes"
+   
+   Library Summary Changes:
+   - Split into two sections: "Preferred Episodes" and "Total Episodes in Plex"
+   - Added note: "(based on current Wanted Episodes settings)"
+   - Made stats time-aware (only past rounds count toward preferred %)
+   - Added total_in_library count (all files, not just desired)
+   - Stats numbers now in Plex Gamboge color
+   
+   Future Rounds:
+   - Rounds with future dates are now shown but dimmed (opacity: 0.6)
+   - Round title text dimmed for future rounds
+   - Checkboxes disabled for future rounds
+   - Label shows "(upcoming)" next to date
+
+4. SETTINGS TAB
+   - Renamed "Grabbing" sub-tab to "User Pref."
+   - Renamed "App Config" sub-tab to "(ADMIN)"
+   - Added admin password protection modal
+   - Password read from settings.yml: uiadminpassword field
+   - Session storage used to remember auth within browser session
+   
+   - Renamed "Desired Sessions" to "Wanted Episodes"
+   - Renamed "Reset" button to "Core Sessions"
+   - Moved "Max grabs per run" to (ADMIN) sub-tab
+   - Moved Overlay Tools to (ADMIN) sub-tab (collapsible section)
+
+5. NEW ROUTE ADDED
+   - POST /verify-admin - validates password against settings.yml
+
+6. CSS ADDITIONS
+   - Plex brand colors: .plex-gamboge (#e5a00d), .plex-shark (#282a2d)
+   - .plex-logo-wide-large for 50% larger Plex logo
+   - .library-summary-row, .library-summary-main, .library-summary-total
+   - .library-summary-note, .library-summary-sublabel
+   - .future-round, .dimmed classes for upcoming rounds
+   - .home-status, .home-nav-hints for Home tab
+   - .modal-small, .admin-error for admin modal
+
+7. FUNCTION UPDATES
+   - get_library_status() now returns:
+     - past_rounds_grabbed / past_rounds_desired (time-aware)
+     - total_in_library (all files in library)
+     - is_future flag on each round
+   - Future rounds are no longer skipped, just marked
+
+FILES MODIFIED
+--------------
+- templates/base.html - Navigation, admin modal, tab names
+- templates/dashboard.html - Simplified Home tab
+- templates/library.html - Download tab with all enhancements
+- templates/settings.html - Admin protection, reorganized sections
+- static/css/style.css - New Plex colors, future round styles
+- f1arr_webui.py - Updated active_tab values, added /verify-admin route,
+                   updated get_library_status() function
+
+SETTINGS.YML ADDITION
+---------------------
+User should add to /config/settings.yml:
+  uiadminpassword: "your-password-here"
+
+================================================================================
+END OF UI REFINEMENTS
+================================================================================

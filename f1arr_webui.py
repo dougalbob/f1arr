@@ -311,8 +311,19 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
                 except KeyError:
                     pass
     
-    result = {"rounds": [], "total_grabbed": 0, "total_desired": 0}
+    result = {
+        "rounds": [], 
+        "total_grabbed": 0, 
+        "total_desired": 0,
+        "past_rounds_grabbed": 0,
+        "past_rounds_desired": 0,
+        "total_in_library": 0
+    }
     today = datetime.now().date()
+    
+    # Count total files in library (all sessions, not just desired)
+    for round_num, sessions in existing.items():
+        result["total_in_library"] += len(sessions)
     
     for r in calendar.get("rounds", []):
         round_num = r.get("round")
@@ -320,12 +331,12 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
         if round_filter and round_num != round_filter:
             continue
         
-        # Skip future rounds
+        # Check if future round
         race_date_str = r.get("date", "")
+        is_future = False
         if race_date_str:
             try:
-                if datetime.strptime(race_date_str, "%Y-%m-%d").date() > today:
-                    continue
+                is_future = datetime.strptime(race_date_str, "%Y-%m-%d").date() > today
             except ValueError:
                 pass
         
@@ -361,6 +372,7 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
             "venue": r.get("venue", "Unknown"),
             "date": r.get("date", ""),
             "sprint_weekend": is_sprint,
+            "is_future": is_future,
             "sessions": sessions,
             "grabbed_count": grabbed_count,
             "desired_count": desired_count,
@@ -368,16 +380,13 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
         
         result["total_grabbed"] += grabbed_count
         result["total_desired"] += desired_count
+        
+        # Only count past rounds for the "preferred" stats
+        if not is_future:
+            result["past_rounds_grabbed"] += grabbed_count
+            result["past_rounds_desired"] += desired_count
     
     return result
-
-
-# =============================================================================
-# COMMAND RUNNERS
-# =============================================================================
-
-def run_grabber_command(args: str):
-    """Run a grabber command in the background."""
     global command_output
     
     command_output["running"] = True
@@ -507,7 +516,7 @@ def index():
         session_defaults=session_defaults,
         next_race=next_race,
         calendar_data=calendar_data,
-        active_tab="commands"
+        active_tab="home"
     )
 
 
@@ -534,7 +543,7 @@ def library():
         next_race=next_race,
         calendar_data=calendar_data,
         flag_data=flag_data,
-        active_tab="library"
+        active_tab="download"
     )
 
 
@@ -1146,6 +1155,34 @@ def service_worker():
 @app.route("/assets/<path:filename>")
 def static_assets(filename):
     return send_from_directory(str(SCRIPT_DIR / "assets"), filename)
+
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+
+@app.route("/verify-admin", methods=["POST"])
+def verify_admin():
+    """Verify admin password."""
+    import yaml
+    
+    data = request.json
+    password = data.get("password", "")
+    
+    try:
+        settings_file = CONFIG_DIR / "settings.yml"
+        if settings_file.exists():
+            with open(settings_file, "r") as f:
+                settings = yaml.safe_load(f)
+                admin_password = settings.get("uiadminpassword", "")
+                
+                if admin_password and password == admin_password:
+                    return jsonify({"valid": True})
+    except Exception as e:
+        print(f"Error verifying admin password: {e}")
+    
+    return jsonify({"valid": False})
 
 
 # =============================================================================

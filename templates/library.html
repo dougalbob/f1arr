@@ -3,8 +3,8 @@
 {% block content %}
 <div class="card">
     <h2 class="section-heading">
-        <img src="/assets/plex_svg/plextv-ar21.svg" class="plex-logo-wide" alt="">
-        <span>Library Content</span>
+        <img src="/assets/plex_svg/plextv-ar21.svg" class="plex-logo-wide-large" alt="">
+        <span class="plex-gamboge">Download New Content</span>
     </h2>
     
     <div class="library-filter">
@@ -20,6 +20,10 @@
                 <option value="">All Rounds</option>
             </select>
         </div>
+        <div class="filter-row">
+            <button onclick="toggleAllRounds(true)" class="secondary small">Expand All</button>
+            <button onclick="toggleAllRounds(false)" class="secondary small">Collapse All</button>
+        </div>
         <button onclick="loadLibraryStatus()" class="secondary small desktop-only">🔄 Refresh</button>
     </div>
     
@@ -31,7 +35,7 @@
 <!-- Sticky Download Button -->
 <div class="sticky-download-bar" id="sticky-download-bar">
     <div class="download-bar-content">
-        <span class="selected-count"><span id="selected-count">0</span> sessions selected</span>
+        <span class="selected-count"><span id="selected-count">0</span> episodes selected</span>
         <button onclick="downloadSelected()" class="success" id="download-btn">⬇️ Download Selected</button>
     </div>
 </div>
@@ -44,9 +48,9 @@
             <button class="modal-close" onclick="closeWarningModal()">✕</button>
         </div>
         <div class="modal-body">
-            <p>The following sessions failed to find downloads recently and may fail again:</p>
+            <p>The following episodes failed to find downloads recently and may fail again:</p>
             <div id="failed-sessions-list" class="failed-sessions-list"></div>
-            <p class="help-text">These sessions will still be searched with --force flag.</p>
+            <p class="help-text">These episodes will still be searched with --force flag.</p>
         </div>
         <div class="modal-footer">
             <button onclick="closeWarningModal()" class="secondary">Cancel</button>
@@ -60,6 +64,7 @@
 <script>
     const calendarData = {{ calendar_data | tojson }};
     const flagData = {{ flag_data | tojson }};
+    const today = new Date();
     let selectedSessions = new Set();
     let failedSessions = {};
     let pendingDownloads = [];
@@ -112,22 +117,44 @@
             });
     }
     
+    function isRoundInFuture(dateStr) {
+        if (!dateStr) return false;
+        const raceDate = new Date(dateStr);
+        return raceDate > today;
+    }
+    
     function renderLibraryStatus(data, season) {
         const container = document.getElementById('library-content');
         
         if (!data.rounds || data.rounds.length === 0) {
-            container.innerHTML = '<p style="color: #666;">No past rounds found for this season.</p>';
+            container.innerHTML = '<p style="color: #666;">No rounds found for this season.</p>';
             return;
         }
         
         const pct = data.total_desired > 0 ? Math.round(data.total_grabbed / data.total_desired * 100) : 0;
+        const totalInLibrary = data.total_in_library || data.total_grabbed;
+        
+        // Calculate time-aware stats (only past rounds)
+        const pastRoundsGrabbed = data.past_rounds_grabbed || data.total_grabbed;
+        const pastRoundsDesired = data.past_rounds_desired || data.total_desired;
+        const pastPct = pastRoundsDesired > 0 ? Math.round(pastRoundsGrabbed / pastRoundsDesired * 100) : 0;
         
         let html = `
             <div class="library-summary">
-                <div class="library-summary-number">${data.total_grabbed} / ${data.total_desired}</div>
-                <div class="library-summary-label">Sessions in Library (${pct}%)</div>
+                <div class="library-summary-row">
+                    <div class="library-summary-main">
+                        <div class="library-summary-number plex-gamboge">${pastRoundsGrabbed} / ${pastRoundsDesired}</div>
+                        <div class="library-summary-label">Preferred Episodes ${pastPct}%</div>
+                        <div class="library-summary-note">(based on current Wanted Episodes settings)</div>
+                    </div>
+                    <div class="library-summary-total">
+                        <div class="library-summary-number plex-gamboge">${totalInLibrary}</div>
+                        <div class="library-summary-label">Total</div>
+                        <div class="library-summary-sublabel">Episodes in Plex</div>
+                    </div>
+                </div>
                 <div class="progress-bar">
-                    <div class="progress-bar-fill" style="width: ${pct}%"></div>
+                    <div class="progress-bar-fill" style="width: ${pastPct}%"></div>
                 </div>
             </div>
         `;
@@ -138,15 +165,17 @@
             const flag = (flagData[season] && flagData[season][round.number]) || '';
             const formattedDate = formatDate(round.date);
             const sprintBadge = round.sprint_weekend ? '<span class="sprint-badge">SPRINT</span>' : '';
+            const isFuture = isRoundInFuture(round.date);
+            const futureClass = isFuture ? 'future-round' : '';
             
             html += `
-                <div class="library-round ${isComplete ? 'complete' : ''}" data-round="${round.number}">
+                <div class="library-round ${isComplete ? 'complete' : ''} ${futureClass}" data-round="${round.number}">
                     <div class="library-round-header" onclick="toggleRoundDetails(this)">
                         <div class="round-header-left">
                             ${flag ? `<img src="/flags/${flag}" class="round-flag-small" alt="">` : ''}
                             <div class="round-header-text">
-                                <span class="library-round-title">Round ${round.number} - ${round.venue} ${sprintBadge}</span>
-                                <span class="library-round-date">${formattedDate}</span>
+                                <span class="library-round-title ${isFuture ? 'dimmed' : ''}">Round ${round.number} - ${round.venue} ${sprintBadge}</span>
+                                <span class="library-round-date">${formattedDate}${isFuture ? ' (upcoming)' : ''}</span>
                             </div>
                         </div>
                         <div class="round-header-right">
@@ -177,7 +206,8 @@
                                        data-round="${round.number}"
                                        data-session="${session.type}"
                                        data-name="${session.name}"
-                                       onchange="toggleSession(this)">
+                                       onchange="toggleSession(this)"
+                                       ${isFuture ? 'disabled' : ''}>
                                 <span class="checkbox-custom"></span>
                                 <span class="session-name">❌ ${session.name}</span>
                             </label>
@@ -208,6 +238,16 @@
     function toggleRoundDetails(header) {
         const round = header.closest('.library-round');
         round.classList.toggle('expanded');
+    }
+    
+    function toggleAllRounds(expand) {
+        document.querySelectorAll('.library-round').forEach(round => {
+            if (expand) {
+                round.classList.add('expanded');
+            } else {
+                round.classList.remove('expanded');
+            }
+        });
     }
     
     function toggleSession(checkbox) {
@@ -307,14 +347,14 @@
         })
         .then(r => r.json())
         .then(data => {
-            showToast(`Starting download of ${pendingDownloads.length} sessions...`, 'success');
+            showToast(`Starting download of ${pendingDownloads.length} episodes...`, 'success');
             
             selectedSessions.clear();
             document.querySelectorAll('.session-checkbox').forEach(cb => cb.checked = false);
             updateDownloadBar();
             
             setTimeout(() => {
-                window.location.href = '/';
+                window.location.href = '/activity';
             }, 1500);
         })
         .catch(err => {

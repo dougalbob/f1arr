@@ -2223,3 +2223,151 @@ button.small { padding: 6px 10px; font-size: 11px; }
         font-size: 14px;
     }
 }
+
+/* ============================================
+   PLEX BRAND COLORS
+   ============================================ */
+.plex-gamboge { color: #e5a00d; }
+.plex-shark { color: #282a2d; }
+.bg-plex-gamboge { background-color: #e5a00d; }
+.bg-plex-shark { background-color: #282a2d; }
+
+/* ============================================
+   LARGER PLEX LOGO
+   ============================================ */
+.plex-logo-wide-large {
+    height: 42px;
+    width: auto;
+}
+
+@media (max-width: 768px) {
+    .plex-logo-wide-large {
+        height: 36px;
+    }
+}
+
+/* ============================================
+   LIBRARY SUMMARY ENHANCEMENTS
+   ============================================ */
+.library-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 10px;
+}
+
+.library-summary-main {
+    flex: 2;
+}
+
+.library-summary-total {
+    flex: 1;
+    text-align: right;
+    border-left: 1px solid #2a2a3e;
+    padding-left: 20px;
+}
+
+.library-summary-note {
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.library-summary-sublabel {
+    font-size: 11px;
+    color: #666;
+}
+
+@media (max-width: 768px) {
+    .library-summary-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .library-summary-total {
+        text-align: center;
+        border-left: none;
+        border-top: 1px solid #2a2a3e;
+        padding-left: 0;
+        padding-top: 15px;
+    }
+}
+
+/* ============================================
+   FUTURE ROUNDS STYLING
+   ============================================ */
+.library-round.future-round {
+    opacity: 0.6;
+}
+
+.library-round.future-round .library-round-header {
+    background: #0a0a10;
+}
+
+.library-round-title.dimmed {
+    color: #666;
+}
+
+.library-round.future-round .session-checkbox-label {
+    cursor: not-allowed;
+}
+
+.library-round.future-round .checkbox-custom {
+    opacity: 0.4;
+}
+
+/* ============================================
+   HOME TAB STYLES
+   ============================================ */
+.home-status {
+    margin-top: 20px;
+}
+
+.home-nav-hints {
+    list-style: none;
+    padding: 0;
+    margin: 15px 0;
+}
+
+.home-nav-hints li {
+    padding: 10px 0;
+    border-bottom: 1px solid #1a1a2e;
+}
+
+.home-nav-hints li:last-child {
+    border-bottom: none;
+}
+
+.home-nav-hints strong {
+    color: #e10600;
+}
+
+/* ============================================
+   ADMIN MODAL STYLES
+   ============================================ */
+.modal-small {
+    max-width: 350px;
+}
+
+.admin-error {
+    color: #e74c3c;
+    font-size: 13px;
+    margin-top: 10px;
+}
+
+/* ============================================
+   SECTION HEADING WITH PLEX LOGO
+   ============================================ */
+.section-heading {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.section-heading span {
+    font-size: 18px;
+    font-weight: bold;
+}
