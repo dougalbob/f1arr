@@ -11,7 +11,6 @@ import sys
 import re
 import argparse
 import time
-import logging
 from pathlib import Path
 from plexapi.server import PlexServer
 
@@ -19,8 +18,10 @@ from plexapi.server import PlexServer
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-# Import from f1_common (which uses config loader)
+# Import centralized logging and other shared functions from f1_common
 from f1_common import (
+    setup_logging,
+    get_logger,
     SessionType,
     SESSION_DISPLAY_NAMES,
     load_calendar,
@@ -35,6 +36,9 @@ from f1_common import (
     translate_path_for_plex,
 )
 
+# Module logger - will be configured by setup_logging()
+logger = get_logger("plex_tagger")
+
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
@@ -46,7 +50,7 @@ PLEX_LIBRARY = get_plex_library_name()
 
 # Validate required settings
 if not PLEX_URL or not PLEX_TOKEN:
-    logging.warning("Plex URL or Token not configured - tagging will fail")
+    logger.warning("Plex URL or Token not configured - tagging will fail")
 
 # Library path
 F1_BASE_PATH = F1_LIBRARY_PATH
@@ -96,10 +100,6 @@ _plex_connection = None
 # HELPER FUNCTIONS
 # =============================================================================
 
-def get_logger():
-    return logging.getLogger("f1_plex_tagger")
-
-
 def host_to_plex_path(host_path):
     return host_path.replace('/mnt/user/data', '/data')
 
@@ -107,7 +107,6 @@ def host_to_plex_path(host_path):
 def get_plex_connection():
     global _plex_connection
     if _plex_connection is None:
-        logger = get_logger()
         logger.info(f"Connecting to Plex at {PLEX_URL}...")
         try:
             _plex_connection = PlexServer(PLEX_URL, PLEX_TOKEN)
@@ -134,7 +133,6 @@ def get_country_from_venue(venue):
 
 
 def trigger_library_scan(plex, library_name):
-    logger = get_logger()
     logger.info(f"Triggering Plex library scan for '{library_name}'...")
     try:
         plex.library.section(library_name).update()
@@ -146,7 +144,6 @@ def trigger_library_scan(plex, library_name):
 
 
 def find_plex_item_by_path(plex, library_name, file_path, retries=MAX_RETRIES):
-    logger = get_logger()
     library = plex.library.section(library_name)
     
     for attempt in range(retries):
@@ -167,8 +164,6 @@ def find_plex_item_by_path(plex, library_name, file_path, retries=MAX_RETRIES):
 
 def apply_tags_and_collection(video, year, round_num, session_type, round_info, dry_run=False):
     """Apply tags, collection, genre, and country to an F1 video."""
-    logger = get_logger()
-    
     session_name = session_type.display_name
     venue = round_info.get('venue', f'Round {round_num}')
     collection_name = f"{year} Round {round_num:02d} {venue}"
@@ -250,7 +245,6 @@ def apply_tags_and_collection(video, year, round_num, session_type, round_info, 
 
 def tag_single_file(file_path, dry_run=False, wait_for_plex=True):
     """Tag a single F1 file in Plex."""
-    logger = get_logger()
     logger.info(f"=== F1 Plex Tagger: Processing ===")
     logger.info(f"  Path: {file_path}")
     
@@ -330,7 +324,6 @@ def tag_from_host_path(host_path, dry_run=False, wait_for_plex=True):
 
 def build_plex_index(plex, library_name):
     """Build an index of all files in the Plex library."""
-    logger = get_logger()
     logger.info(f"Building Plex library index for '{library_name}'...")
     index = {}
     
@@ -347,8 +340,6 @@ def build_plex_index(plex, library_name):
 
 def scan_full_library(dry_run=False):
     """Scan and tag all F1 content in the library."""
-    logger = get_logger()
-    
     plex = get_plex_connection()
     plex_index = build_plex_index(plex, PLEX_LIBRARY)
     
@@ -433,17 +424,15 @@ def main():
     parser.add_argument('file_path', nargs='?', help='Single file (container path)')
     parser.add_argument('--host-path', help='Single file (host path)')
     parser.add_argument('--dry-run', action='store_true', help='Preview only')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     parser.add_argument('--list-sessions', '-l', action='store_true', 
                         help='List all session types')
     args = parser.parse_args()
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
+    # Setup centralized logging
+    setup_logging(debug_mode=args.debug)
+    logger.info("F1 Plex Tagger initialized")
     
-    logger = get_logger()
     logger.info("=" * 70)
     logger.info("F1 PLEX TAGGER")
     logger.info("=" * 70)

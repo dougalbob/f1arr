@@ -12,13 +12,19 @@ This replaces the SABnzbd post-script approach with a clean folder watcher.
 import os
 import sys
 import time
-import logging
 import threading
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Set, Dict, Optional, Callable
 
-logger = logging.getLogger(__name__)
+# Add script directory to path for imports
+SCRIPT_DIR = Path(__file__).parent.resolve()
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from f1_common import get_logger
+
+# Module logger - will be configured by setup_logging() in scheduler
+logger = get_logger("watcher")
 
 
 class DownloadWatcher:

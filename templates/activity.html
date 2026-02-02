@@ -301,7 +301,7 @@
     
     // ===== SABnzbd Queue Monitor =====
     let sabPollInterval = null;
-    const SAB_POLL_RATE = 15000;
+    const SAB_POLL_RATE = 4000; 
 
     function refreshSabQueue() {
         fetch('/api/sabnzbd/queue')

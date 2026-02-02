@@ -387,6 +387,9 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
             result["past_rounds_desired"] += desired_count
     
     return result
+
+def run_grabber_command(args: str):
+    """Run a grabber command in the background."""
     global command_output
     
     command_output["running"] = True
@@ -396,9 +399,13 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
     
     try:
         cmd = [PYTHON_PATH, str(GRABBER_SCRIPT)] + args.split()
+        
         process = subprocess.Popen(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            text=True, bufsize=1
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
         )
         
         output_lines = []
@@ -413,8 +420,7 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
         command_output["output"] += f"\nError: {e}"
     finally:
         command_output["running"] = False
-
-
+    
 def run_overlay_command(args: str):
     """Run an overlay command in the background."""
     global command_output

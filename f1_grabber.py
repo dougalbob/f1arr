@@ -3,196 +3,6 @@
 Formula 1 Grabber - Automated Session Downloader
 =================================================
 
-Scans your Formula 1 library for missing sessions and automatically
-grabs them from Prowlarr/SABnzbd.
-
-Modes:
-    backfill    - Find and grab missing sessions for a past season
-    scheduled   - Check for sessions that have recently aired and grab them
-    status      - Show current state and upcoming sessions
-    
-Usage:
-    # Check status
-    f1-grab status
-
-    # Backfill entire 2025 season
-    f1-grab backfill --season 2025
-
-    # Backfill single round
-    f1-grab backfill --season 2025 --round 12
-
-    # Force backfill with retry
-    f1-grab backfill --season 2025 --force
-
-    # Force backfill single round
-    f1-grab backfill --season 2025 --round 12 --force
-
-    # Run scheduled check
-    f1-grab scheduled
-
-    # Dry run scheduled check
-    f1-grab scheduled --dry-run
-
-    # View live logs
-    f1-logs
-
-    # Enter container shell
-    f1-shell
-
-# =============================================================================
-# DIRECTORY STRUCTURE
-# =============================================================================
-#
-# Host paths (Unraid):
-#   /mnt/user/data/pythonscripts/
-#   ├── .env                          <- Shared environment variables (API keys, tokens)
-#   ├── utils/                         <- Shared utility modules
-#   │   ├── __init__.py
-#   │   └── env_loader.py
-#   └── motorsport/
-#       └── f1/
-#           ├── assets/
-#           │   ├── f1_fanart/         <- Venue fanart images
-#           │   └── f1_posters/        <- Venue poster images
-#           ├── config/
-#           │   ├── f1_2025.json       <- 2025 season calendar
-#           │   ├── f1_2026.json       <- 2026 season calendar (with session times)
-#           │   ├── f1_sprints.json    <- Sprint weekend configuration
-#           │   └── grabber_state.json <- Persistent state (searched/grabbed/failed)
-#           ├── f1_common.py           <- Shared module (session types, patterns, calendar)
-#           ├── f1_discord.py          <- Discord notification module
-#           ├── f1_grabber.py          <- This script
-#           ├── f1_plex_tagger.py      <- Plex metadata tagging
-#           ├── f1_scheduler.py        <- Always-on daemon (runs in Docker)
-#           ├── f1_sort.py             <- File organization + artwork
-#           ├── Dockerfile             <- Container build instructions
-#           └── README.md              <- Full documentation
-#
-# Container paths (inside f1-scheduler):
-#   /opt/venv/                         <- Python virtual environment (container-only)
-#   /data/pythonscripts/               <- Mounted from host (read-write)
-#   /data/media/                       <- Mounted from host (read-write)
-#   /appdata/                          <- Container appdata
-#
-# =============================================================================
-# RECOVERY OPTIONS
-# =============================================================================
-#
-# There are TWO ways to recover this system. Choose based on your situation:
-#
-# -----------------------------------------------------------------------------
-# OPTION A: DOCKER CONTAINER (RECOMMENDED)
-# -----------------------------------------------------------------------------
-# Use this when: Setting up fresh, or after losing Docker configuration
-# Pros: Isolated environment, won't break if Unraid updates Python
-# Cons: Requires Docker, slightly more complex initial setup
-#
-# The f1-scheduler container:
-#   - Has its own Python venv at /opt/venv (inside container)
-#   - Mounts your scripts from host (changes sync automatically)
-#   - Runs f1_scheduler.py continuously (monitors for new sessions)
-#   - Can also run grabber/sort/tagger manually via docker exec
-#
-# Recovery steps:
-#
-#   1. Restore scripts from GitHub (if needed):
-#      cd /mnt/user/data/pythonscripts/motorsport
-#      git clone git@github.com:dougalbob/f1_grabber.git f1
-#
-#   2. Ensure .env has current API keys:
-#      nano /mnt/user/data/pythonscripts/.env
-#      # Update: SABNZBD_API_KEY, PROWLARR_API_KEY, PLEX_TOKEN
-#
-#   3. Login to GitHub Container Registry:
-#      docker login ghcr.io -u dougalbob
-#      # Enter your GitHub Personal Access Token when prompted
-#
-#   4. Pull and run the container:
-#      docker pull ghcr.io/dougalbob/f1_grabber:latest
-#
-#      docker run -d \
-#        --name f1-scheduler-v2 \
-#        --restart unless-stopped \
-#        --network downloads \
-#        -e TZ=Europe/London \
-#        -e PYTHONUNBUFFERED=1 \
-#        --env-file /mnt/user/data/pythonscripts/.env \
-#        -v /mnt/user/data/pythonscripts:/data/pythonscripts \
-#        -v /mnt/user/data/media:/data/media \
-#        -v /mnt/user/appdata/f1-scheduler:/appdata \
-#        ghcr.io/dougalbob/f1_grabber:latest
-#
-#   5. Verify it's running:
-#      docker logs f1-scheduler --tail 20
-#      f1-grab status
-#
-# Alternative: Build locally instead of pulling from GHCR:
-#      cd /mnt/user/data/pythonscripts/motorsport/f1_v2
-#      docker build -t f1-scheduler:latest .
-#      # Then run with f1-scheduler:latest instead of ghcr.io/dougalbob/f1_grabber:latest
-#
-# Usage (with aliases from /boot/config/go):
-#      f1-grab status                              # Check what's missing
-#      f1-grab backfill --season 2025              # Backfill entire season
-#      f1-grab backfill --season 2025 --round 12   # Backfill single round
-#      f1-grab backfill --season 2025 --force      # Retry failed searches
-#      f1-grab scheduled                           # Manual scheduled check
-#      f1-grab scheduled --dry-run                 # Preview without grabbing
-#      f1-logs                                     # View live logs
-#      f1-shell                                    # Enter container shell
-#
-# Usage (full commands without aliases):
-#      docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_grabber.py status
-#      docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_grabber.py backfill --season 2025
-#      docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_grabber.py backfill --season 2025 --round 12
-#
-
-# -----------------------------------------------------------------------------
-# KEY DIFFERENCES BETWEEN OPTIONS
-# -----------------------------------------------------------------------------
-#
-# | Aspect              | Option A (Docker)              | Option B (Shared venv)        |
-# |---------------------|--------------------------------|-------------------------------|
-# | Venv location       | /opt/venv (inside container)   | /mnt/.../pythonscripts/venv   |
-# | Isolation           | Fully isolated                 | Shared across containers      |
-# | Python updates      | Won't break (container fixed)  | May break on updates          |
-# | Scheduler           | Runs automatically             | Must be triggered manually    |
-# | Setup complexity    | Higher (Docker + GHCR)         | Lower (just pip install)      |
-# | Recovery            | Pull image + run               | Recreate venv + pip install   |
-# | Best for            | Production, always-on          | Quick testing, manual runs    |
-#
-# -----------------------------------------------------------------------------
-# ALIAS SETUP (for Option A)
-# -----------------------------------------------------------------------------
-# Add to /boot/config/go on Unraid:
-#
-# alias f1-grab='docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_grabber.py'
-# alias f1-sort='docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_sort.py'
-# alias f1-tag='docker exec f1-scheduler-v2 /opt/venv/bin/python3 /data/pythonscripts/motorsport/f1_v2/f1_plex_tagger.py'
-# alias f1-logs='docker logs -f f1-scheduler-v2'
-# alias f1-shell='docker exec -it f1-scheduler-v2 /bin/bash'
-#
-# Then run: source /boot/config/go
-#
-# -----------------------------------------------------------------------------
-# GITHUB REPOSITORY
-# -----------------------------------------------------------------------------
-# Source code: https://github.com/dougalbob/f1_grabber (private)
-# Container:   ghcr.io/dougalbob/f1_grabber:latest
-#
-# To update GitHub after script changes:
-#      cd /mnt/user/data/pythonscripts/motorsport/f1_v2
-#      git add .
-#      git commit -m "Description of changes"
-#      git push origin main
-#
-# To rebuild and push container after Dockerfile changes:
-#      cd /mnt/user/data/pythonscripts/motorsport/f1_v2
-#      docker build -t f1-scheduler:latest .
-#      docker tag f1-scheduler:latest ghcr.io/dougalbob/f1_grabber:latest
-#      docker push ghcr.io/dougalbob/f1_grabber:latest
-#
-# =============================================================================
 """
 import os
 import sys
@@ -205,14 +15,15 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import Dict, List, Optional, Tuple, Set
-import logging
 
 # Add script directory to path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-# Import shared F1 module (which uses config loader)
+# Import centralized logging FIRST, then other shared F1 module items
 from f1_common import (
+    setup_logging,
+    get_logger,
     SessionType,
     SESSION_DISPLAY_NAMES,
     SESSION_BY_NAME,
@@ -240,6 +51,13 @@ from f1_common import (
     get_sabnzbd_url,
     get_sabnzbd_api_key,
 )
+
+#===============================================================================
+# MODULE LOGGER
+#===============================================================================
+
+# Module logger - will be configured by setup_logging() in main()
+logger = get_logger("grabber")
 
 #===============================================================================
 # CONFIGURATION
@@ -324,33 +142,6 @@ SESSION_KEY_MAP = {
 SESSION_TO_CALENDAR_KEY = {v: k for k, v in SESSION_KEY_MAP.items()}
 
 #===============================================================================
-# LOGGING SETUP
-#===============================================================================
-
-def setup_logging(verbose: bool = False):
-    """Configure logging."""
-    level = logging.DEBUG if verbose else logging.INFO
-    
-    log_dir = os.path.join(F1_LIBRARY, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file = os.path.join(log_dir, f"f1_grabber_{timestamp}.log")
-    
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-    
-    logging.info(f"Log file: {log_file}")
-    return log_file
-
-#===============================================================================
 # STATE MANAGEMENT
 #===============================================================================
 
@@ -368,7 +159,7 @@ class GrabberState:
                 with open(self.state_file, 'r') as f:
                     return json.load(f)
             except Exception as e:
-                logging.warning(f"Could not load state file: {e}")
+                logger.warning(f"Could not load state file: {e}")
         
         return {
             "searched": {},
@@ -386,7 +177,7 @@ class GrabberState:
         with open(self.state_file, 'w') as f:
             json.dump(self.state, f, indent=2)
         
-        logging.debug(f"State saved to {self.state_file}")
+        logger.debug(f"State saved to {self.state_file}")
     
     def make_session_key(self, season: int, round_num: int, session: SessionType) -> str:
         """Create a unique key for a session."""
@@ -509,7 +300,7 @@ def parse_session_datetime(round_info: dict, day: str, session_key: str) -> Opti
         return end_dt
         
     except Exception as e:
-        logging.debug(f"Error parsing session datetime: {e}")
+        logger.debug(f"Error parsing session datetime: {e}")
         return None
 
 
@@ -526,7 +317,7 @@ def get_session_end_time(round_info: dict, session_type: SessionType) -> Optiona
     """
     calendar_key = SESSION_TO_CALENDAR_KEY.get(session_type)
     if not calendar_key:
-        logging.debug(f"No calendar key for {session_type.display_name}")
+        logger.debug(f"No calendar key for {session_type.display_name}")
         return None
     
     day_mapping = {
@@ -640,7 +431,7 @@ def scan_library_for_season(season: int) -> Dict[int, Set[SessionType]]:
     season_path = os.path.join(F1_LIBRARY, str(season))
     
     if not os.path.exists(season_path):
-        logging.warning(f"Season folder not found: {season_path}")
+        logger.warning(f"Season folder not found: {season_path}")
         return {}
     
     existing = {}
@@ -671,7 +462,7 @@ def scan_library_for_season(season: int) -> Dict[int, Set[SessionType]]:
                 
                 if folder_year == season and folder_round == round_num:
                     existing[round_num].add(session_type)
-                    logging.debug(f"Found: Round {round_num} - {session_type.display_name}")
+                    logger.debug(f"Found: Round {round_num} - {session_type.display_name}")
     
     return existing
 
@@ -735,7 +526,7 @@ def get_indexers() -> List[dict]:
             return [i for i in indexers if i.get('enable', False)]
         return []
     except Exception as e:
-        logging.error(f"Error getting indexers: {e}")
+        logger.error(f"Error getting indexers: {e}")
         return []
 
 
@@ -790,9 +581,9 @@ def parse_newznab_xml(xml_text: str, indexer_name: str = "Unknown") -> List[dict
                 releases.append(release)
     
     except ET.ParseError as e:
-        logging.debug(f"XML parse error: {e}")
+        logger.debug(f"XML parse error: {e}")
     except Exception as e:
-        logging.debug(f"Error parsing XML: {e}")
+        logger.debug(f"Error parsing XML: {e}")
     
     return releases
 
@@ -814,7 +605,7 @@ def search_indexer(query: str, indexer_id: int, indexer_name: str) -> List[dict]
             return parse_newznab_xml(response.text, indexer_name)
         return []
     except Exception as e:
-        logging.debug(f"Error searching {indexer_name}: {e}")
+        logger.debug(f"Error searching {indexer_name}: {e}")
         return []
 
 
@@ -886,6 +677,7 @@ def build_search_queries(round_info: dict, session_type: SessionType, season: in
     
     return unique_queries
 
+
 def search_for_session(
     round_info: dict,
     session_type: SessionType,
@@ -907,7 +699,7 @@ def search_for_session(
     round_num = round_info.get("round", "?")
     venue = round_info.get('venue', 'Unknown')
     
-    logging.info(f"Searching for: {session_type.display_name} - Round {round_num} {venue}")
+    logger.info(f"Searching for: {session_type.display_name} - Round {round_num} {venue}")
     
     for indexer in indexers:
         idx_id = indexer.get('id')
@@ -922,7 +714,7 @@ def search_for_session(
                     seen_guids.add(guid)
                     all_results.append(release)
     
-    logging.debug(f"Found {len(all_results)} raw results")
+    logger.debug(f"Found {len(all_results)} raw results")
     
     # Use shared filter_releases from f1_common
     filtered = filter_releases(
@@ -936,7 +728,6 @@ def search_for_session(
     )
     
     return filtered, queries[:5]  # Updated return value
-
 
 
 def print_search_queries(queries: List[str], verbose: bool = VERBOSE_SEARCH_OUTPUT):
@@ -967,11 +758,11 @@ def test_sabnzbd_connection() -> bool:
         if response.status_code == 200:
             result = response.json()
             version = result.get('version', 'Unknown')
-            logging.info(f"SABnzbd connected: v{version}")
+            logger.info(f"SABnzbd connected: v{version}")
             return True
         return False
     except Exception as e:
-        logging.error(f"SABnzbd connection failed: {e}")
+        logger.error(f"SABnzbd connection failed: {e}")
         return False
 
 
@@ -985,7 +776,7 @@ def grab_release(release: dict, session_info: dict) -> bool:
     download_url = release.get('downloadUrl') or release.get('link')
     
     if not download_url:
-        logging.error("No download URL available")
+        logger.error("No download URL available")
         return False
     
     # Build metadata-enriched name with prefix
@@ -1014,15 +805,15 @@ def grab_release(release: dict, session_info: dict) -> bool:
         if response.status_code == 200:
             result = response.json()
             if result.get('status', False):
-                logging.info(f"✅ Grabbed: {enriched_name}")
-                logging.debug(f"   Original: {release.get('title', 'Unknown')}")
+                logger.info(f"✅ Grabbed: {enriched_name}")
+                logger.debug(f"   Original: {release.get('title', 'Unknown')}")
                 return True
             else:
-                logging.error(f"SABnzbd error: {result.get('error', 'Unknown')}")
+                logger.error(f"SABnzbd error: {result.get('error', 'Unknown')}")
                 return False
         return False
     except Exception as e:
-        logging.error(f"Grab error: {e}")
+        logger.error(f"Grab error: {e}")
         return False
 
 #===============================================================================
@@ -1251,11 +1042,11 @@ def cmd_backfill(args):
             )
             
             if state.was_grabbed(session_key):
-                logging.debug(f"Skipping {session_key}: already grabbed")
+                logger.debug(f"Skipping {session_key}: already grabbed")
                 continue
             
             if state.was_searched(session_key):
-                logging.debug(f"Skipping {session_key}: recently searched")
+                logger.debug(f"Skipping {session_key}: recently searched")
                 continue
             
             filtered_missing.append(item)
@@ -1405,17 +1196,17 @@ def cmd_scheduled(args):
         session_type = item['session_type']
         
         if round_num in existing and session_type in existing[round_num]:
-            logging.debug(f"Skipping {session_type.display_name}: already in library")
+            logger.debug(f"Skipping {session_type.display_name}: already in library")
             continue
         
         session_key = state.make_session_key(season, round_num, session_type)
         
         if state.was_grabbed(session_key):
-            logging.debug(f"Skipping {session_key}: already grabbed")
+            logger.debug(f"Skipping {session_key}: already grabbed")
             continue
         
         if not force and state.was_searched(session_key, max_age_days=1):
-            logging.debug(f"Skipping {session_key}: recently searched")
+            logger.debug(f"Skipping {session_key}: recently searched")
             continue
         
         filtered_ready.append(item)
@@ -1665,8 +1456,10 @@ Examples:
         parser.print_help()
         return 1
     
+    # Setup centralized logging
     verbose = getattr(args, 'verbose', False)
-    setup_logging(verbose)
+    setup_logging(debug_mode=verbose)
+    logger.info("F1 Grabber initialized")
     
     if args.command == 'backfill':
         return cmd_backfill(args)

@@ -12,7 +12,6 @@ Runs continuously inside the f1arr container with TWO responsibilities:
 import os
 import sys
 import time
-import logging
 import signal
 import argparse
 from datetime import datetime, timedelta
@@ -22,7 +21,10 @@ from typing import Optional
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
+# Import centralized logging FIRST
 from f1_common import (
+    setup_logging,
+    get_logger,
     load_calendar,
     F1_LIBRARY_PATH,
     F1_DOWNLOADS_PATH,
@@ -57,38 +59,14 @@ CONFIG = {
     "sort_script": SCRIPT_DIR / "f1_sort.py",
     "config_dir": get_config_dir(),
     "python_path": sys.executable,
-    "log_level": "INFO",
 }
 
 # =============================================================================
-# LOGGING SETUP
+# MODULE LOGGER
 # =============================================================================
 
-def setup_logging():
-    log_dir = os.path.join(F1_LIBRARY_PATH, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    
-    log_file = os.path.join(log_dir, "scheduler.log")
-    
-    if os.path.exists(log_file) and os.path.getsize(log_file) > 10 * 1024 * 1024:
-        backup = log_file + ".old"
-        if os.path.exists(backup):
-            os.remove(backup)
-        os.rename(log_file, backup)
-    
-    log_level = getattr(logging, CONFIG["log_level"], logging.INFO)
-    
-    logging.basicConfig(
-        level=log_level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-    
-    return log_file
+# Module logger - will be configured by setup_logging() in main()
+logger = get_logger("scheduler")
 
 # =============================================================================
 # SORT PROCESSOR
@@ -97,7 +75,7 @@ def setup_logging():
 def process_download(folder_path: str) -> bool:
     import subprocess
     
-    logging.info(f"🔄 Processing download: {os.path.basename(folder_path)}")
+    logger.info(f"🔄 Processing download: {os.path.basename(folder_path)}")
     
     try:
         result = subprocess.run(
@@ -108,22 +86,22 @@ def process_download(folder_path: str) -> bool:
         )
         
         if result.returncode == 0:
-            logging.info(f"✅ Sort completed successfully")
+            logger.info(f"✅ Sort completed successfully")
             for line in result.stdout.split('\n'):
                 if any(x in line for x in ['✅', '❌', 'Moving', 'Error']):
-                    logging.info(f"   {line.strip()}")
+                    logger.info(f"   {line.strip()}")
             return True
         else:
-            logging.error(f"❌ Sort failed with code {result.returncode}")
+            logger.error(f"❌ Sort failed with code {result.returncode}")
             if result.stderr:
-                logging.error(f"   {result.stderr[:500]}")
+                logger.error(f"   {result.stderr[:500]}")
             return False
     
     except subprocess.TimeoutExpired:
-        logging.error("❌ Sort timed out after 5 minutes")
+        logger.error("❌ Sort timed out after 5 minutes")
         return False
     except Exception as e:
-        logging.error(f"❌ Sort error: {e}")
+        logger.error(f"❌ Sort error: {e}")
         return False
 
 # =============================================================================
@@ -217,7 +195,7 @@ def get_next_race_weekend(calendar: dict) -> Optional[dict]:
 def run_grabber_scheduled() -> dict:
     import subprocess
     
-    logging.info("🚀 Running grabber in scheduled mode...")
+    logger.info("🚀 Running grabber in scheduled mode...")
     
     try:
         result = subprocess.run(
@@ -236,20 +214,20 @@ def run_grabber_scheduled() -> dict:
                 except ValueError:
                     pass
             elif any(x in line for x in ['✅ Grabbed', '❌ No matching']):
-                logging.info(f"  {line.strip()}")
+                logger.info(f"  {line.strip()}")
         
         if result.returncode == 0:
-            logging.info(f"✅ Grabber completed: {grabbed_count} grabbed")
+            logger.info(f"✅ Grabber completed: {grabbed_count} grabbed")
             return {"success": True, "grabbed": grabbed_count}
         else:
-            logging.error(f"❌ Grabber failed with code {result.returncode}")
+            logger.error(f"❌ Grabber failed with code {result.returncode}")
             return {"success": False, "grabbed": 0}
     
     except subprocess.TimeoutExpired:
-        logging.error("❌ Grabber timed out")
+        logger.error("❌ Grabber timed out")
         return {"success": False, "grabbed": 0}
     except Exception as e:
-        logging.error(f"❌ Grabber error: {e}")
+        logger.error(f"❌ Grabber error: {e}")
         return {"success": False, "grabbed": 0}
 
 # =============================================================================
@@ -303,7 +281,7 @@ class SchedulerState:
     
     def reset_for_new_weekend(self, weekend: dict):
         if self.current_weekend and self.current_weekend.get("round") != weekend.get("round"):
-            logging.info(f"🏎️ New race weekend: Round {weekend['round']} {weekend['venue']}")
+            logger.info(f"🏎️ New race weekend: Round {weekend['round']} {weekend['venue']}")
         self.current_weekend = weekend
 
 # =============================================================================
@@ -314,44 +292,47 @@ def main():
     parser = argparse.ArgumentParser(description='F1 Scheduler')
     parser.add_argument('--watcher-only', action='store_true', help='Run only the download watcher')
     parser.add_argument('--no-watcher', action='store_true', help='Disable download watcher')
+    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     args = parser.parse_args()
     
-    log_file = setup_logging()
+    # Setup centralized logging
+    setup_logging(debug_mode=args.debug)
+    logger.info("F1 Scheduler initialized")
+    
     state = SchedulerState()
     
     def signal_handler(signum, frame):
-        logging.info("🛑 Shutdown signal received")
+        logger.info("🛑 Shutdown signal received")
         state.running = False
     
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     
-    logging.info("=" * 60)
-    logging.info("  F1ARR SCHEDULER")
-    logging.info("=" * 60)
-    logging.info(f"  Season:              {CONFIG['season']}")
-    logging.info(f"  Race weekend check:  Every {CONFIG['race_weekend_interval_minutes']} minutes")
-    logging.info(f"  Off-weekend check:   Every {CONFIG['off_weekend_interval_minutes']} minutes")
-    logging.info(f"  Search delay:        {CONFIG['search_delay_hours']} hours")
-    logging.info(f"  Watch directory:     {CONFIG['watch_dir']}")
-    logging.info(f"  Library path:        {F1_LIBRARY_PATH}")
-    logging.info(f"  Log file:            {log_file}")
-    logging.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("  F1ARR SCHEDULER")
+    logger.info("=" * 60)
+    logger.info(f"  Season:              {CONFIG['season']}")
+    logger.info(f"  Race weekend check:  Every {CONFIG['race_weekend_interval_minutes']} minutes")
+    logger.info(f"  Off-weekend check:   Every {CONFIG['off_weekend_interval_minutes']} minutes")
+    logger.info(f"  Search delay:        {CONFIG['search_delay_hours']} hours")
+    logger.info(f"  Watch directory:     {CONFIG['watch_dir']}")
+    logger.info(f"  Library path:        {F1_LIBRARY_PATH}")
+    logger.info("=" * 60)
     
     # Initialize watcher
     watcher = None
     if not args.no_watcher:
-        logging.info("📂 Initializing download watcher...")
+        logger.info("📂 Initializing download watcher...")
         watcher = create_watcher(
             watch_dir=CONFIG["watch_dir"],
             processor=process_download,
             config_dir=str(CONFIG["config_dir"])
         )
         watcher.start()
-        logging.info(f"👁️ Watching: {CONFIG['watch_dir']}")
+        logger.info(f"👁️ Watching: {CONFIG['watch_dir']}")
     
     if args.watcher_only:
-        logging.info("Running in watcher-only mode")
+        logger.info("Running in watcher-only mode")
         try:
             while state.running:
                 time.sleep(1)
@@ -364,26 +345,26 @@ def main():
     
     calendar = load_calendar(CONFIG["season"])
     if not calendar:
-        logging.error(f"❌ Could not load calendar for {CONFIG['season']}")
+        logger.error(f"❌ Could not load calendar for {CONFIG['season']}")
         if watcher:
             watcher.stop()
         return 1
     
     if not has_session_times(calendar):
-        logging.warning(f"⚠️ Calendar doesn't have detailed session times")
+        logger.warning(f"⚠️ Calendar doesn't have detailed session times")
     
-    logging.info(f"📅 Loaded calendar: {len(calendar.get('rounds', []))} rounds")
+    logger.info(f"📅 Loaded calendar: {len(calendar.get('rounds', []))} rounds")
     
     current_weekend = get_current_race_weekend(calendar)
     if current_weekend:
-        logging.info(f"🏎️ Currently in race weekend: Round {current_weekend['round']} {current_weekend['venue']}")
+        logger.info(f"🏎️ Currently in race weekend: Round {current_weekend['round']} {current_weekend['venue']}")
         state.reset_for_new_weekend(current_weekend)
     else:
         next_weekend = get_next_race_weekend(calendar)
         if next_weekend:
             until = datetime.combine(next_weekend['window_start'], datetime.min.time()) - datetime.now()
-            logging.info(f"⏳ Next race weekend: Round {next_weekend['round']} {next_weekend['venue']}")
-            logging.info(f"   Starts in {format_timedelta(until)}")
+            logger.info(f"⏳ Next race weekend: Round {next_weekend['round']} {next_weekend['venue']}")
+            logger.info(f"   Starts in {format_timedelta(until)}")
     
     while state.running:
         try:
@@ -407,7 +388,7 @@ def main():
                 if next_weekend:
                     until = datetime.combine(next_weekend['window_start'], datetime.min.time()) - now
                     if until.total_seconds() > 0:
-                        logging.info(f"💤 Next: Round {next_weekend['round']} {next_weekend['venue']} in {format_timedelta(until)}")
+                        logger.info(f"💤 Next: Round {next_weekend['round']} {next_weekend['venue']} in {format_timedelta(until)}")
             
             sleep_seconds = get_sleep_interval(in_race_weekend)
             
@@ -420,13 +401,13 @@ def main():
                 time.sleep(sleep_seconds % 30)
         
         except Exception as e:
-            logging.error(f"❌ Error in main loop: {e}", exc_info=True)
+            logger.error(f"❌ Error in main loop: {e}", exc_info=True)
             time.sleep(60)
     
     if watcher:
         watcher.stop()
     
-    logging.info("🛑 Scheduler stopped")
+    logger.info("🛑 Scheduler stopped")
     return 0
 
 

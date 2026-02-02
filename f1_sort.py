@@ -9,7 +9,6 @@ Sorts F1 downloads into the Plex library structure and applies artwork.
 import os
 import sys
 import shutil
-import logging
 import re
 import time
 import urllib.request
@@ -23,13 +22,10 @@ from PIL import Image, ImageDraw, ImageFont
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
-try:
-    from f1_discord import notify_session_added, should_notify
-    DISCORD_AVAILABLE = True
-except ImportError:
-    DISCORD_AVAILABLE = False
-
+# Import centralized logging FIRST
 from f1_common import (
+    setup_logging,
+    get_logger,
     SessionType,
     SESSION_DISPLAY_NAMES,
     classify_session,
@@ -45,6 +41,15 @@ from f1_common import (
     get_plex_token,
     get_plex_library_id,
 )
+
+# Module logger - will be configured by setup_logging() in main()
+logger = get_logger("sort")
+
+try:
+    from f1_discord import notify_session_added, should_notify
+    DISCORD_AVAILABLE = True
+except ImportError:
+    DISCORD_AVAILABLE = False
 
 # =============================================================================
 # CONFIGURATION
@@ -69,46 +74,20 @@ CONFIG_DIR = get_config_dir()
 PLEX_TAGGER_AVAILABLE = False
 tag_single_file = None
 
-PLEX_TAGGER_AVAILABLE = False
-tag_single_file = None
-
 def init_plex_tagger():
     global PLEX_TAGGER_AVAILABLE, tag_single_file
     try:
         from f1_plex_tagger import tag_single_file as tagger_func
         tag_single_file = tagger_func
         PLEX_TAGGER_AVAILABLE = True
-        logging.info("✅ Plex tagger module loaded")
+        logger.info("✅ Plex tagger module loaded")
     except ImportError as e:
-        logging.warning(f"⚠️ Plex tagger not available: {e}")
+        logger.warning(f"⚠️ Plex tagger not available: {e}")
         PLEX_TAGGER_AVAILABLE = False
 
 # =============================================================================
-# LOGGING
+# REGEX PATTERNS
 # =============================================================================
-
-def setup_logging(dry_run: bool = False):
-    log_dir = os.path.join(F1_BASE, "logs")
-    os.makedirs(log_dir, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_file = os.path.join(log_dir, f"f1_sort_{timestamp}.log")
-    
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-            logging.FileHandler(log_file, encoding="utf-8"),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
-    
-    logging.info(f"Log file: {log_file}")
-    if dry_run:
-        logging.info("DRY RUN MODE - no changes will be made")
-    
-    return log_file
 
 TAG_PATTERN = re.compile(
     r"(?:1080p|720p|2160p|WEB[-]?DL|WEB|webrip|bluray|h264|x264|x265|H265|hevc|"
@@ -142,7 +121,7 @@ def flatten_if_single_subdir(path: str):
             dst = os.path.join(path, name)
             shutil.move(src, dst)
         os.rmdir(subdir_path)
-        logging.info(f"Flattened nested subfolder")
+        logger.info(f"Flattened nested subfolder")
 
 def rename_files_to_match_folder(folder_path: str):
     folder_name = os.path.basename(folder_path)
@@ -180,7 +159,7 @@ def rename_files_to_match_folder(folder_path: str):
         
         if not os.path.exists(new_path):
             os.rename(temp_path, new_path)
-            logging.info(f"Renamed: {new_name}")
+            logger.info(f"Renamed: {new_name}")
         else:
             fallback_name = f"{folder_name}_{idx}{ext}"
             os.rename(temp_path, os.path.join(folder_path, fallback_name))
@@ -196,19 +175,19 @@ def delete_unwanted(base_dir: str, name: str):
 
 def trigger_plex_refresh():
     if not PLEX_TOKEN:
-        logging.warning("No PLEX_TOKEN set, skipping refresh")
+        logger.warning("No PLEX_TOKEN set, skipping refresh")
         return
     
-    logging.info("Triggering Plex refresh...")
+    logger.info("Triggering Plex refresh...")
     url = f"http://{PLEX_IP}:{PLEX_PORT}/library/sections/{LIBRARY_ID}/refresh?X-Plex-Token={PLEX_TOKEN}"
     try:
         with urllib.request.urlopen(url, timeout=10) as response:
             if response.status == 200:
-                logging.info("✅ Plex refresh triggered")
+                logger.info("✅ Plex refresh triggered")
             else:
-                logging.warning(f"Plex refresh returned: {response.status}")
+                logger.warning(f"Plex refresh returned: {response.status}")
     except Exception as e:
-        logging.error(f"Plex refresh error: {e}")
+        logger.error(f"Plex refresh error: {e}")
 
 # =============================================================================
 # OVERLAY FUNCTIONS
@@ -267,7 +246,7 @@ def overlay_text_on_image(
                     continue
         
         if header_font is None:
-            logging.error("No TrueType font found!")
+            logger.error("No TrueType font found!")
             header_font = ImageFont.load_default()
             session_font = ImageFont.load_default()
         
@@ -344,7 +323,7 @@ def overlay_text_on_image(
         return result
     
     except Exception as e:
-        logging.error(f"Overlay error: {e}")
+        logger.error(f"Overlay error: {e}")
         if img:
             img.close()
         return None
@@ -398,7 +377,7 @@ def apply_text_overlays(final_path: str, round_info: dict, session_name: str):
         if result:
             result.save(fanart_path, "JPEG", quality=95)
             result.close()
-            logging.info(f"✅ Fanart overlay applied")
+            logger.info(f"✅ Fanart overlay applied")
     
     poster_path = os.path.join(final_path, "poster.jpg")
     if os.path.isfile(poster_path):
@@ -406,18 +385,18 @@ def apply_text_overlays(final_path: str, round_info: dict, session_name: str):
         if result:
             result.save(poster_path, "JPEG", quality=95)
             result.close()
-            logging.info(f"✅ Poster overlay applied")
+            logger.info(f"✅ Poster overlay applied")
 
 def generate_thumb(final_path: str):
     fanart = os.path.join(final_path, "fanart.jpg")
     thumb = os.path.join(final_path, "thumb.jpg")
     if os.path.exists(fanart):
         shutil.copy2(fanart, thumb)
-        logging.info("✅ Thumb created")
+        logger.info("✅ Thumb created")
 
 def apply_assets(final_path: str, round_info: dict, session_name: str, dry_run: bool = False):
     if dry_run:
-        logging.info("[DRY RUN] Would apply artwork")
+        logger.info("[DRY RUN] Would apply artwork")
         return
     
     stats = {}
@@ -439,7 +418,7 @@ def apply_plex_tags(final_path: str, dry_run: bool = False):
         try:
             tag_single_file(media_file, dry_run=dry_run, wait_for_plex=True)
         except Exception as e:
-            logging.error(f"Plex tagging error: {e}")
+            logger.error(f"Plex tagging error: {e}")
 
 # =============================================================================
 # MAIN PROCESSING
@@ -448,7 +427,7 @@ def apply_plex_tags(final_path: str, dry_run: bool = False):
 def process_folder(source_path: str, dry_run: bool = False) -> bool:
     folder_name = os.path.basename(source_path)
     
-    logging.info(f"Processing: {folder_name}")
+    logger.info(f"Processing: {folder_name}")
     
     if not dry_run:
         delete_unwanted(source_path, "sample")
@@ -458,24 +437,24 @@ def process_folder(source_path: str, dry_run: bool = False) -> bool:
     
     if parsed:
         year, round_num, session_type = parsed
-        logging.info(f"📦 Prefix: {build_prefix(year, round_num, session_type)}")
+        logger.info(f"📦 Prefix: {build_prefix(year, round_num, session_type)}")
     else:
         session_type = classify_session(folder_name)
         year = extract_year_from_text(folder_name)
         
         if not year:
-            logging.error("Could not determine year")
+            logger.error("Could not determine year")
             return False
         
         if session_type == SessionType.UNKNOWN:
-            logging.error("Could not classify session")
+            logger.error("Could not classify session")
             return False
         
-        logging.info(f"🔍 Classified: {session_type.display_name}")
+        logger.info(f"🔍 Classified: {session_type.display_name}")
     
     calendar = load_calendar(year)
     if not calendar:
-        logging.error(f"No calendar for {year}")
+        logger.error(f"No calendar for {year}")
         return False
     
     if parsed:
@@ -486,11 +465,11 @@ def process_folder(source_path: str, dry_run: bool = False) -> bool:
             round_num = round_info.get("round", 0)
     
     if not round_info:
-        logging.error("Could not identify round")
+        logger.error("Could not identify round")
         return False
     
     venue = round_info.get("venue", "Unknown")
-    logging.info(f"   Round {round_num}: {venue}")
+    logger.info(f"   Round {round_num}: {venue}")
     
     prefix = build_prefix(year, round_num, session_type)
     session_name = session_type.display_name
@@ -500,17 +479,17 @@ def process_folder(source_path: str, dry_run: bool = False) -> bool:
     dest_parent = os.path.join(F1_BASE, str(year), round_folder)
     final_path = os.path.join(dest_parent, dest_folder)
     
-    logging.info(f"   Destination: {final_path}")
+    logger.info(f"   Destination: {final_path}")
     
     if dry_run:
-        logging.info("[DRY RUN] Would move and process")
+        logger.info("[DRY RUN] Would move and process")
         return True
     
     os.makedirs(dest_parent, exist_ok=True)
     
     if source_path != final_path:
         if os.path.exists(final_path):
-            logging.warning(f"Destination exists, merging...")
+            logger.warning(f"Destination exists, merging...")
             for item in os.listdir(source_path):
                 src = os.path.join(source_path, item)
                 dst = os.path.join(final_path, item)
@@ -535,27 +514,34 @@ def process_folder(source_path: str, dry_run: bool = False) -> bool:
                 dry_run=dry_run
             )
         except Exception as e:
-            logging.warning(f"Discord notification failed: {e}")
+            logger.warning(f"Discord notification failed: {e}")
     
     time.sleep(2)
     trigger_plex_refresh()
     
-    logging.info("✅ Processing complete")
+    logger.info("✅ Processing complete")
     return True
 
 def main():
     parser = argparse.ArgumentParser(description="F1 Sort - Standalone Sorter")
     parser.add_argument("--source", "-s", required=True, help="Source folder to process")
     parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without changes")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
     
-    setup_logging(args.dry_run)
+    # Setup centralized logging
+    setup_logging(debug_mode=args.debug)
+    logger.info("F1 Sort initialized")
+    
+    if args.dry_run:
+        logger.info("DRY RUN MODE - no changes will be made")
+    
     init_plex_tagger()
     
     source = args.source.rstrip("/")
     
     if not os.path.isdir(source):
-        logging.error(f"Source not found: {source}")
+        logger.error(f"Source not found: {source}")
         return 1
     
     success = process_folder(source, dry_run=args.dry_run)
