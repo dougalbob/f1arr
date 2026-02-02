@@ -53,34 +53,32 @@
         </div>
     </div>
     
-    <!-- By Series Chart -->
+    <!-- By Session Type -->
     <div class="card">
-        <h2>By Series</h2>
+        <h2>By Session Type</h2>
         <div class="class-chart">
-            {% set total_class = (stats.by_class.F1 or 0) + (stats.by_class.F2 or 0) + (stats.by_class.F3 or 0) %}
+            {% set total_sessions = (stats.by_session_type.core or 0) + (stats.by_session_type.support or 0) %}
             <div class="class-bar-container">
                 <div class="class-row">
-                    <span class="class-name">F1</span>
+                    <span class="class-name">Core Sessions</span>
                     <div class="class-bar-bg">
-                        <div class="class-bar f1" style="width: {{ ((stats.by_class.F1 or 0) / total_class * 100) if total_class > 0 else 0 }}%"></div>
+                        <div class="class-bar core-sessions" style="width: {{ ((stats.by_session_type.core or 0) / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
                     </div>
-                    <span class="class-count">{{ stats.by_class.F1 or 0 }}</span>
+                    <span class="class-count">{{ stats.by_session_type.core or 0 }}</span>
                 </div>
                 <div class="class-row">
-                    <span class="class-name">F2</span>
+                    <span class="class-name">Support Content</span>
                     <div class="class-bar-bg">
-                        <div class="class-bar f2" style="width: {{ ((stats.by_class.F2 or 0) / total_class * 100) if total_class > 0 else 0 }}%"></div>
+                        <div class="class-bar support-content" style="width: {{ ((stats.by_session_type.support or 0) / total_sessions * 100) if total_sessions > 0 else 0 }}%"></div>
                     </div>
-                    <span class="class-count">{{ stats.by_class.F2 or 0 }}</span>
-                </div>
-                <div class="class-row">
-                    <span class="class-name">F3</span>
-                    <div class="class-bar-bg">
-                        <div class="class-bar f3" style="width: {{ ((stats.by_class.F3 or 0) / total_class * 100) if total_class > 0 else 0 }}%"></div>
-                    </div>
-                    <span class="class-count">{{ stats.by_class.F3 or 0 }}</span>
+                    <span class="class-count">{{ stats.by_session_type.support or 0 }}</span>
                 </div>
             </div>
+        </div>
+        
+        <div class="session-type-legend">
+            <small><strong>Core:</strong> Practice, Qualifying, Sprint, Race</small><br>
+            <small><strong>Support:</strong> Shows, Notebooks, Press Conferences</small>
         </div>
         
         <!-- Success Rate -->

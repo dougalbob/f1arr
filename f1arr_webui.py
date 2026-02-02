@@ -13,6 +13,7 @@ import json
 import re
 from pathlib import Path
 from datetime import datetime, timedelta
+from f1_grab_stats import get_stats
 from flask import (
     Flask, render_template, request, jsonify, 
     send_from_directory, Response
@@ -638,37 +639,11 @@ def calendar():
         active_tab="calendar"
     )
 
-
 @app.route("/stats")
 def stats():
+    """Statistics page."""
     next_race = get_next_race_info()
-    
-    # Default stats structure
-    stats_data = {
-        "total_grabbed": 0,
-        "grabs_today": 0,
-        "grabs_this_week": 0,
-        "grabs_this_month": 0,
-        "last_run": None,
-        "last_scheduled": None,
-        "by_day": [],
-        "by_month": [],
-        "by_class": {"F1": 0, "F2": 0, "F3": 0},
-        "by_year": {},
-        "success_rate": 100,
-        "total_failed": 0,
-        "recent_grabs": []
-    }
-    
-    # Try to load stats from grab_stats module if available
-    try:
-        from grab_stats import get_stats_summary
-        stats_data = get_stats_summary()
-    except ImportError:
-        pass
-    
-    max_daily = max([d.get("count", 0) for d in stats_data.get("by_day", [])], default=1) or 1
-    max_monthly = max([m.get("count", 0) for m in stats_data.get("by_month", [])], default=1) or 1
+    stats_data, max_daily, max_monthly = get_stats()
     
     return render_template(
         "stats.html",
@@ -679,6 +654,26 @@ def stats():
         max_monthly=max_monthly,
         active_tab="stats"
     )
+  
+    # # Try to load stats from grab_stats module if available
+    # try:
+    #     from grab_stats import get_stats_summary
+    #     stats_data = get_stats_summary()
+    # except ImportError:
+    #     pass
+    
+    # max_daily = max([d.get("count", 0) for d in stats_data.get("by_day", [])], default=1) or 1
+    # max_monthly = max([m.get("count", 0) for m in stats_data.get("by_month", [])], default=1) or 1
+    
+    # return render_template(
+    #     "stats.html",
+    #     status=command_output,
+    #     next_race=next_race,
+    #     stats=stats_data,
+    #     max_daily=max_daily,
+    #     max_monthly=max_monthly,
+    #     active_tab="stats"
+    # )
 
 
 # =============================================================================

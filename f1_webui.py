@@ -25,6 +25,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify, send_from_directory
 from utils import config
+from f1_grab_stats import get_stats
 
 # Add paths for imports
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -115,7 +116,6 @@ command_output = {
     "output": "",
     "timestamp": None
 }
-
 
 def load_calendar_data(year: int) -> dict:
     """Load calendar for a given year."""
@@ -1704,7 +1704,22 @@ def app_config_route():
             **settings,
             "validation": validation
         })
-
+    
+@app.route("/stats")
+def stats():
+    """Statistics page."""
+    next_race = get_next_race_info()
+    stats_data, max_daily, max_monthly = get_stats()
+    
+    return render_template(
+        "stats.html",
+        status=command_output,
+        next_race=next_race,
+        stats=stats_data,
+        max_daily=max_daily,
+        max_monthly=max_monthly,
+        active_tab="stats"
+    )
 
 @app.route("/test-connections")
 def test_connections():

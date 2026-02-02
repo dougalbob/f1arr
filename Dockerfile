@@ -48,6 +48,7 @@ COPY f1_plex_tagger.py /app/
 COPY f1_scheduler.py /app/
 COPY f1_sort.py /app/
 COPY f1_watcher.py /app/
+COPY f1_grab_stats.py /app/
 COPY f1arr_webui.py /app/
 COPY entrypoint.sh /app/
 

@@ -1166,6 +1166,26 @@ button.small { padding: 6px 10px; font-size: 11px; }
     text-align: center;
     white-space: nowrap;
 }
+/* Session Type Chart Colors */
+.class-bar.core-sessions {
+    background: linear-gradient(90deg, #e10600, #ff1a1a);
+}
+
+.class-bar.support-content {
+    background: linear-gradient(90deg, #666, #888);
+}
+
+.session-type-legend {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 5px;
+    color: #aaa;
+}
+
+.session-type-legend small {
+    line-height: 1.6;
+}
 
 /* Series Chart (F1/F2/F3) */
 .class-chart {
@@ -1215,6 +1235,7 @@ button.small { padding: 6px 10px; font-size: 11px; }
     font-weight: bold;
     color: #fff;
 }
+
 
 /* Success Rate */
 .success-rate {
