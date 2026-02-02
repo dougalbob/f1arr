@@ -1,0 +1,94 @@
+cat > /mnt/user/data/pythonscripts/motorsport/f1arr/AI_contextual_notes/centralised_logging_implementation.md << 'EOF'
+# Centralized Logging Implementation
+**Date:** 02 February 2025
+**Version:** v1.9
+
+## Overview
+Implemented centralized logging across all F1arr Python scripts, matching the pattern already established in the motogparr companion app.
+
+## Changes Made
+
+### Scripts Updated
+
+| Script | Changes |
+|--------|---------|
+| **f1_scheduler.py** | Removed local `setup_logging()`, imports `setup_logging` and `get_logger` from f1_common, uses `logger = get_logger("scheduler")` |
+| **f1_grabber.py** | Removed local `setup_logging()`, imports centralized logging, uses `logger = get_logger("grabber")` |
+| **f1_sort.py** | Removed local `setup_logging()`, imports centralized logging, uses `logger = get_logger("sort")` |
+| **f1_watcher.py** | Changed from `logging.getLogger(__name__)` to `get_logger("watcher")` |
+| **f1_plex_tagger.py** | Removed local `get_logger()` helper and `logging.basicConfig()`, uses centralized `get_logger("plex_tagger")` |
+
+### f1_common.py Logging Functions (lines 126-303)
+Already contained the centralized logging infrastructure:
+- `setup_logging()` - Initializes logging system with rotating file handler
+- `get_logger(name)` - Returns logger in the `f1.*` hierarchy
+- `LogConfig` class - Configuration singleton
+- Creates rotating log file at `/config/logs/f1.log`
+
+### Pattern Applied to Each Script
+
+**Before (legacy per-script logging):**
+```python
+import logging
+
+def setup_logging():
+    logging.basicConfig(...)
+    return log_file
+
+def main():
+    log_file = setup_logging()
+    logging.info("Starting...")
+
+After (centralized logging):
+
+from f1_common import setup_logging, get_logger
+
+logger = get_logger("scriptname")
+
+def main():
+    setup_logging(debug_mode=args.debug)
+    logger.info("Starting...")
+
+Additional Fixes
+f1arr_webui.py - Added missing run_grabber_command() function that was accidentally removed during earlier refactoring
+
+f1arr_webui.py - Removed orphaned unreachable code after return result in get_library_status() function
+
+All scripts - Added --debug argument support for verbose logging
+
+Log File Location
+Context	Path
+Inside container	/config/logs/f1.log
+On Unraid host	/mnt/user/appdata/f1arr/logs/f1.log
+Logger Hierarchy
+All loggers are children of the f1 root logger:
+
+f1 (root)
+f1.scheduler
+f1.grabber
+f1.sort
+f1.watcher
+f1.plex_tagger
+Verification Commands
+
+# Check log file exists
+docker exec f1arr ls -la /config/logs/
+
+# View live logs
+docker exec f1arr tail -f /config/logs/f1.log
+
+# Verify no legacy setup_logging in scripts
+docker exec f1arr grep -l "def setup_logging" /app/f1_*.py
+# Should only return f1_common.py
+
+# Test logging manually
+docker exec -it f1arr python3 -c "
+from f1_common import setup_logging, get_logger
+setup_logging()
+logger = get_logger('test')
+logger.info('Test message')
+"
+
+Reference
+The implementation matches the centralized logging already in use by the motogparr companion app at:
+/mnt/user/data/pythonscripts/motorsport/motogparr/
