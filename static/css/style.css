@@ -2016,6 +2016,11 @@ button.small { padding: 6px 10px; font-size: 11px; }
     background: rgba(231, 76, 60, 0.05);
 }
 
+.activity-error {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 4px;
+}
 .activity-icon {
     width: 36px;
     height: 36px;

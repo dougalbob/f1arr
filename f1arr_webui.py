@@ -353,7 +353,8 @@ def get_library_status(year: int, round_filter: int = None) -> dict:
         
         for session_type in sorted(desired_set, key=lambda x: int(x)):
             # Skip FP3 for sprint weekends
-            if is_sprint and session_type == SessionType.PRACTICE_3:
+            # Skip FP2 and FP3 for sprint weekends
+            if is_sprint and session_type in (SessionType.PRACTICE_2, SessionType.PRACTICE_3):
                 continue
             # Skip sprint sessions for non-sprint weekends
             if not is_sprint and session_type in (SessionType.SPRINT, SessionType.SPRINT_QUALIFYING):
@@ -952,7 +953,7 @@ def activity_stream():
         
         # Parse specific event types
         if '🔍 Searching:' in message:
-            m = re.search(r'Round (\d+) (\w+) - (.+)', message)
+            m = re.search(r'Round (\d+) (.+?) - (.+)', message)
             if m:
                 event['stage'] = 'searching'
                 event['round'] = m.group(1)
@@ -961,7 +962,7 @@ def activity_stream():
                 event['session_key'] = f"R{m.group(1)}_{m.group(3).replace(' ', '_')}"
         
         elif '📋 Found' in message:
-            m = re.search(r'Found (\d+) candidates for Round (\d+) (\w+) - (.+)', message)
+            m = re.search(r'Found (\d+) candidates for Round (\d+) (.+?) - (.+)', message)
             if m:
                 event['stage'] = 'found'
                 event['candidates'] = int(m.group(1))
@@ -969,7 +970,19 @@ def activity_stream():
                 event['venue'] = m.group(3)
                 event['name'] = f"{m.group(3)} {m.group(4)}"
                 event['session_key'] = f"R{m.group(2)}_{m.group(4).replace(' ', '_')}"
-        
+
+        elif '❌ No candidates:' in message:
+            m = re.search(r'No candidates: Round (\d+) (.+?) - (.+)', message)
+            if m:
+                event['stage'] = 'error'
+                event['round'] = m.group(1)
+                event['venue'] = m.group(2)
+                event['name'] = f"{m.group(2)} {m.group(3)}"
+                event['session_key'] = f"R{m.group(1)}_{m.group(3).replace(' ', '_')}"
+                event['detail'] = 'No matching releases found'
+                event['candidates'] = 0
+                event['error_message'] = 'Episode unavailable - no matching releases after filtering'
+
         elif '⬇️ Sending to SABnzbd:' in message:
             m = re.search(r'Sending to SABnzbd: (.+)', message)
             if m:

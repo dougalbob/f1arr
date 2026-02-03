@@ -670,7 +670,7 @@ def search_for_session(
     round_num = round_info.get("round", "?")
     venue = round_info.get('venue', 'Unknown')
     
-    logger.info(f"Searching for: {session_type.display_name} - Round {round_num} {venue}")
+    logger.info(f"🔍 Searching: Round {round_num} {venue} - {session_type.display_name}")
     
     for indexer in indexers:
         idx_id = indexer.get('id')
@@ -685,7 +685,7 @@ def search_for_session(
                     seen_guids.add(guid)
                     all_results.append(release)
     
-    logger.debug(f"Found {len(all_results)} raw results")
+    logger.info(f"📋 Found {len(all_results)} candidates for Round {round_num} {venue} - {session_type.display_name}")
     
     # Use shared filter_releases from f1_common
     filtered = filter_releases(
@@ -1082,6 +1082,7 @@ def cmd_backfill(args):
         
         if not results:
             print("    ❌ No matching releases found")
+            logger.info(f"❌ No candidates: Round {round_num} {venue} - {session_type.display_name}")
             state.mark_failed(session_key, "No results")
             continue
         
@@ -1261,6 +1262,7 @@ def cmd_scheduled(args):
         
         if not results:
             print("    ❌ No matching releases found yet")
+            logger.info(f"❌ No candidates: Round {round_num} {venue} - {session_type.display_name}")
             state.mark_failed(session_key, "No results")
             continue
         

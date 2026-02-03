@@ -162,7 +162,8 @@
         
         if (event.release) activity.release = event.release;
         if (event.score) activity.score = event.score;
-        if (event.candidates) activity.candidates = event.candidates;
+        if (event.candidates !== undefined) activity.candidates = event.candidates;
+        if (event.error_message) activity.error_message = event.error_message;
         
         renderActivities();
     }
@@ -243,7 +244,8 @@
                 <div class="activity-status">${stageInfo.label}</div>
                 <div class="activity-release" style="${activity.release ? '' : 'display:none'}">📦 ${escapeHtml(activity.release || '')}</div>
                 <div class="activity-score" style="${activity.score ? '' : 'display:none'}">Score: ${activity.score || ''}</div>
-                <div class="activity-candidates" style="${activity.candidates ? '' : 'display:none'}">${activity.candidates || ''} candidates found</div>
+                <div class="activity-candidates" style="${activity.candidates && activity.stage !== 'error' ? '' : 'display:none'}">${activity.candidates || ''} candidates found</div>
+                <div class="activity-error" style="${activity.error_message ? '' : 'display:none'}">⚠️ ${activity.error_message || ''}</div>
             </div>
             <div class="activity-time">
                 ${formatTime(activity.lastUpdate)}
@@ -282,8 +284,14 @@
         
         const candidates = element.querySelector('.activity-candidates');
         if (candidates) {
-            candidates.style.display = activity.candidates ? '' : 'none';
+            candidates.style.display = activity.candidates && activity.stage !== 'error' ? '' : 'none';
             if (activity.candidates) candidates.textContent = `${activity.candidates} candidates found`;
+        }
+        
+        const errorMsg = element.querySelector('.activity-error');
+        if (errorMsg) {
+            errorMsg.style.display = activity.error_message ? '' : 'none';
+            if (activity.error_message) errorMsg.innerHTML = `⚠️ ${activity.error_message}`;
         }
         
         const time = element.querySelector('.activity-time');
