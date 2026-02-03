@@ -29,9 +29,12 @@ from f1_common import (
     load_calendar,
     F1_LIBRARY_PATH,
     get_config_dir,
+    get_logger,
 )
 
 from utils import config
+
+logger = get_logger("webui")
 
 # =============================================================================
 # CONFIGURATION
@@ -42,7 +45,7 @@ GRABBER_SCRIPT = SCRIPT_DIR / "f1_grabber.py"
 OVERLAY_SCRIPT = SCRIPT_DIR / "f1_overlay_utility.py"
 CONFIG_DIR = get_config_dir()
 WEBUI_CONFIG_FILE = CONFIG_DIR / "webui_settings.json"
-LOG_FILE = CONFIG_DIR / "logs" / "f1.log"
+LOG_FILE = CONFIG_DIR / "logs" / "f1.log" 
 
 SEASONS = [2024, 2025, 2026]
 CURRENT_YEAR = datetime.now().year
@@ -873,7 +876,8 @@ def calendar_data_api():
         library_status[r["number"]] = {
             "grabbed": r["grabbed_count"],
             "total": r["desired_count"],
-            "sessions": [{"name": s["name"], "exists": s["exists"]} for s in r["sessions"]]
+#            "sessions": [{"name": s["name"], "exists": s["exists"]} for s in r["sessions"]]  DELETEDOUGAL
+            "sessions": [{"name": s["name"], "exists": s["exists"], "type": s["type"].name} for s in r["sessions"]]
         }
     
     return jsonify({

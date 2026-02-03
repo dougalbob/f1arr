@@ -29,7 +29,7 @@ from f1_common import (
     SESSION_BY_NAME,
     CORE_SESSIONS,
     SPRINT_SESSIONS,
-    DEFAULT_DESIRED_SESSIONS,
+    get_desired_sessions,  # ADD THIS
     classify_session,
     load_calendar,
     get_round_by_number,
@@ -97,35 +97,6 @@ DEFAULT_SEARCH_DELAY_HOURS = 4
 # --- Current Season (for scheduled mode) ---
 CURRENT_SEASON = 2026
 
-# --- Desired Sessions Configuration ---
-# Uses SessionType enum from f1_common
-DESIRED_SESSIONS = {
-    SessionType.WEEKEND_WARMUP: False,
-    SessionType.TEAM_PRINCIPALS: False,
-    SessionType.DRIVER_PRESS_CONFERENCE: False,
-    SessionType.PADDOCK_UNCUT: False,
-    SessionType.PADDOCK_SHOW: False,
-    SessionType.F1_SHOW: False,
-    SessionType.PRACTICE_1: True,
-    SessionType.PRACTICE_2: True,
-    SessionType.PRACTICE_3: True,
-    SessionType.SPRINT_QUALIFYING: True,
-    SessionType.SPRINT: True,
-    SessionType.POST_SPRINT_SHOW: False,
-    SessionType.TEDS_SPRINT_NOTEBOOK: False,
-    SessionType.PRE_QUALIFYING_SHOW: False,
-    SessionType.QUALIFYING: True,
-    SessionType.POST_QUALIFYING_SHOW: False,
-    SessionType.TEDS_QUALIFYING_NOTEBOOK: False,
-    SessionType.PRE_RACE_SHOW: False,
-    SessionType.RACE: True,
-    SessionType.RACE_UNCUT: False,
-    SessionType.POST_RACE_SHOW: False,
-    SessionType.TEDS_RACE_NOTEBOOK: False,
-    SessionType.TEDS_NOTEBOOK: False,
-    SessionType.JOLYON_PALMERS_ANALYSIS: False,
-    SessionType.FULL_EVENT: False,
-}
 
 # --- Session Key Mapping (calendar key -> SessionType) ---
 SESSION_KEY_MAP = {
@@ -348,7 +319,7 @@ def get_sessions_ready_for_search(calendar: dict, search_delay_hours: int = None
         round_num = round_info.get("round", 0)
         delay = search_delay_hours or round_info.get("search_delay_hours", DEFAULT_SEARCH_DELAY_HOURS)
         
-        for session_type, wanted in DESIRED_SESSIONS.items():
+        for session_type, wanted in get_desired_sessions().items():
             if not wanted:
                 continue
             
@@ -381,7 +352,7 @@ def get_upcoming_sessions(calendar: dict, hours_ahead: int = 48) -> List[dict]:
         round_num = round_info.get("round", 0)
         venue = round_info.get("venue", "Unknown")
         
-        for session_type, wanted in DESIRED_SESSIONS.items():
+        for session_type, wanted in get_desired_sessions().items():
             if not wanted:
                 continue
             
@@ -497,7 +468,7 @@ def identify_missing_sessions(
         existing_for_round = existing.get(round_num, set())
         
         # Get valid sessions for this specific round (excludes FP2/FP3 for sprints)
-        valid_sessions = get_valid_sessions_for_round(round_entry, DESIRED_SESSIONS)
+        valid_sessions = get_valid_sessions_for_round(round_entry, get_desired_sessions())
         
         for session_type in valid_sessions:
             if session_type not in existing_for_round:

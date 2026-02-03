@@ -387,6 +387,37 @@ CORE_SESSIONS = {
     SessionType.RACE,
 }
 
+def get_desired_sessions() -> Dict["SessionType", bool]:
+    """
+    Get desired sessions from webui_settings.json.
+    Falls back to CORE_SESSIONS if file doesn't exist.
+    """
+    settings_file = CONFIG_DIR / "webui_settings.json"
+    
+    # Start with defaults (all False except core sessions)
+    desired = {session: False for session in SessionType if session != SessionType.UNKNOWN}
+    
+    # Default core sessions to True
+    for session in CORE_SESSIONS:
+        desired[session] = True
+    
+    # Try to load from settings file
+    if settings_file.exists():
+        try:
+            with open(settings_file, 'r') as f:
+                settings = json.load(f)
+                sessions = settings.get("sessions", {})
+                for name, enabled in sessions.items():
+                    try:
+                        session_type = SessionType[name]
+                        desired[session_type] = enabled
+                    except KeyError:
+                        pass
+        except Exception:
+            pass
+    
+    return desired
+
 SPRINT_SESSIONS = {
     SessionType.SPRINT_QUALIFYING,
     SessionType.SPRINT,
@@ -395,7 +426,7 @@ SPRINT_SESSIONS = {
 }
 
 DEFAULT_DESIRED_SESSIONS = {
-    SessionType.WEEKEND_WARMUP: True,
+    SessionType.WEEKEND_WARMUP: False,
     SessionType.TEAM_PRINCIPALS: False,
     SessionType.DRIVER_PRESS_CONFERENCE: True,
     SessionType.PADDOCK_UNCUT: False,
