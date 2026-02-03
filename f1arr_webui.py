@@ -824,13 +824,26 @@ def download_selected():
         round_num = sel.get("round")
         if round_num not in by_round:
             by_round[round_num] = []
-        by_round[round_num].append(sel.get("session"))
+        
+        # Convert session type name to episode number
+        session_name = sel.get("session", "")
+        try:
+            # SessionType is an IntEnum, so we can get its value
+            session_type = SessionType[session_name]
+            episode_num = f"E{int(session_type):02d}"
+            by_round[round_num].append(episode_num)
+        except (KeyError, ValueError):
+            # If conversion fails, skip this session
+            logger.warning(f"Could not convert session: {session_name}")
+            continue
     
-    # Build commands
+    # Build commands with specific sessions
     commands = []
-    for round_num, sessions in by_round.items():
-        cmd = f"backfill --season {season} --round {round_num} --force"
-        commands.append(cmd)
+    for round_num, episodes in by_round.items():
+        if episodes:  # Only if we have valid episodes
+            sessions_str = ",".join(episodes)
+            cmd = f"backfill --season {season} --round {round_num} --sessions {sessions_str} --force"
+            commands.append(cmd)
     
     # Run commands sequentially in background
     def run_all_commands(cmds):

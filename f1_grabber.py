@@ -1026,6 +1026,23 @@ def cmd_backfill(args):
     print(f"  Found {total_existing} existing sessions across {len(existing)} rounds")
     
     missing = identify_missing_sessions(season, calendar, existing, round_filter)
+    
+    # Filter by specific sessions if provided
+    sessions_filter = getattr(args, 'sessions', None)
+    if sessions_filter:
+        session_nums = []
+        for s in sessions_filter.split(','):
+            s = s.strip().upper()
+            if s.startswith('E'):
+                s = s[1:]
+            try:
+                session_nums.append(int(s))
+            except ValueError:
+                pass
+        
+        if session_nums:
+            missing = [m for m in missing if int(m['session_type']) in session_nums]
+            print(f"\n  Filtered to {len(missing)} sessions: {sessions_filter}")
     print_missing_summary(missing)
     
     if not missing:
@@ -1431,7 +1448,8 @@ Examples:
     backfill_parser.add_argument('--dry-run', action='store_true', help='Preview without grabbing')
     backfill_parser.add_argument('--force', action='store_true', help='Ignore recent search history')
     backfill_parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
-    
+    backfill_parser.add_argument('--sessions', type=str, help='Comma-separated session numbers (e.g., E07,E15,E19)')
+
     # Scheduled command
     scheduled_parser = subparsers.add_parser('scheduled', help='Check for recently aired sessions')
     scheduled_parser.add_argument('--season', type=int, help=f'Season year (default: {CURRENT_SEASON})')
