@@ -1,0 +1,123 @@
+cat > /mnt/user/data/pythonscripts/motorsport/f1arr/AI_contextual_notes/activity_feed_fixes_v1.9.4.md << 'EOF'
+# Activity Feed Fixes - v1.9.4
+**Date:** 03 February 2025
+**Version:** v1.9.3 → v1.9.4
+
+## Overview
+Fixed issues with the Activity Feed not displaying search stages and added user-friendly error messaging when no matching releases are found.
+
+## Issues Identified
+
+### Issue 1: "Searching" stage never appeared
+**Cause:** Mismatch between log message format and parser regex.
+
+- **Grabber logged:** `Searching for: Practice 3 - Round 22 Las Vegas`
+- **Parser expected:** `🔍 Searching: Round 22 Las Vegas - Practice 3`
+
+**Fix in `f1_grabber.py` (line 673):**
+```python
+# Before
+logger.info(f"Searching for: {session_type.display_name} - Round {round_num} {venue}")
+
+# After
+logger.info(f"🔍 Searching: Round {round_num} {venue} - {session_type.display_name}")
+Issue 2: Multi-word venues not parsed correctly
+Cause: Regex used (\w+) which only matches single words.
+
+Log: Round 22 Las Vegas - Practice 3
+Regex captured: venue = "Las" (missing "Vegas")
+Fix in f1arr_webui.py (lines 956 and 965):
+
+# Before
+m = re.search(r'Round (\d+) (\w+) - (.+)', message)
+
+# After  
+m = re.search(r'Round (\d+) (.+?) - (.+)', message)
+
+Issue 3: "Found candidates" was debug level
+Cause: Message logged at logger.debug() so didn't appear in standard logs.
+
+Fix in f1_grabber.py (line 688):
+
+# Before
+logger.debug(f"Found {len(all_results)} raw results")
+
+# After
+logger.info(f"📋 Found {len(all_results)} candidates for Round {round_num} {venue} - {session_type.display_name}")
+
+ssue 4: No feedback when search finds no matching releases
+Cause: No log message or UI element for this scenario.
+
+Fix - Added log messages in f1_grabber.py (lines 1084 and 1263):
+
+Fix - Added parser in f1arr_webui.py (after line 973):
+
+elif '❌ No candidates:' in message:
+    m = re.search(r'No candidates: Round (\d+) (.+?) - (.+)', message)
+    if m:
+        event['stage'] = 'error'
+        event['round'] = m.group(1)
+        event['venue'] = m.group(2)
+        event['name'] = f"{m.group(2)} {m.group(3)}"
+        event['session_key'] = f"R{m.group(1)}_{m.group(3).replace(' ', '_')}"
+        event['detail'] = 'No matching releases found'
+        event['candidates'] = 0
+        event['error_message'] = 'Episode unavailable - no matching releases after filtering'
+
+Fix - Updated templates/activity.html:
+
+1) In processActivityEvent function:
+JavaScript
+
+if (event.candidates !== undefined) activity.candidates = event.candidates;
+if (event.error_message) activity.error_message = event.error_message;
+
+2) In createActivityElement function - added error message div:
+JavaScript
+
+<div class="activity-candidates" style="${activity.candidates && activity.stage !== 'error' ? '' : 'display:none'}">${activity.candidates || ''} candidates found</div>
+<div class="activity-error" style="${activity.error_message ? '' : 'display:none'}">⚠️ ${activity.error_message || ''}</div>
+
+3) In updateActivityElement function - added error handling:
+const candidates = element.querySelector('.activity-candidates');
+if (candidates) {
+    candidates.style.display = activity.candidates && activity.stage !== 'error' ? '' : 'none';
+    if (activity.candidates) candidates.textContent = `${activity.candidates} candidates found`;
+}
+
+const errorMsg = element.querySelector('.activity-error');
+if (errorMsg) {
+    errorMsg.style.display = activity.error_message ? '' : 'none';
+    if (activity.error_message) errorMsg.innerHTML = `⚠️ ${activity.error_message}`;
+}
+
+Fix - Added CSS in static/css/style.css:
+.activity-error {
+    color: #e74c3c;
+    font-size: 0.85em;
+    margin-top: 4px;
+}
+
+Log Message Format Reference
+For the activity feed parser to work, log messages must follow these formats:
+
+Stage	Log Format
+Searching	🔍 Searching: Round {num} {venue} - {session}
+Found	📋 Found {count} candidates for Round {num} {venue} - {session}
+No results	❌ No candidates: Round {num} {venue} - {session}
+Grabbed	✅ Grabbed: {prefix} {venue} {session}
+
+Files Modified
+File	Changes
+f1_grabber.py	Updated log message formats (lines 673, 688, 1084, 1263)
+f1arr_webui.py	Fixed regex patterns, added no-candidates parser (lines 956, 965, 974-982)
+templates/activity.html	Added error_message handling in JS functions
+static/css/style.css	Added .activity-error styling
+Applying to MotoGParr
+The same fixes will be needed in the motogparr app:
+
+Update motogp_grabber.py log message formats
+Update motogp_webui.py parser regex patterns
+Update templates/activity.html for error message display
+Add CSS for error styling
+The session types and venue names differ, but the pattern is identical.
