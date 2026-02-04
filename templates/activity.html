@@ -88,7 +88,7 @@
         'downloading': { icon: '⬇️', label: 'Downloading', order: 5, color: '#e67e22' },
         'ready': { icon: '📂', label: 'Download complete', order: 6, color: '#27ae60' },
         'processing': { icon: '⚙️', label: 'Processing', order: 7, color: '#3498db' },
-        'sorting': { icon: '📁', label: 'Sorting to library', order: 8, color: '#9b59b6' },
+        'sorting': { icon: '📁', label: 'Plex processing jobs', order: 8, color: '#9b59b6' },
         'tagging': { icon: '🏷️', label: 'Applying Plex tags', order: 9, color: '#1abc9c' },
         'plex': { icon: '📺', label: 'Refreshing Plex', order: 10, color: '#e74c3c' },
         'complete': { icon: '✅', label: 'Ready in Plex', order: 11, color: '#27ae60' },
@@ -129,6 +129,12 @@
     }
     
     function processActivityEvent(event) {
+        // Skip these stages from the feed
+        const hiddenStages = ['plex'];
+        if (hiddenStages.includes(event.stage)) {
+            return;
+        }
+        
         const sessionKey = event.session_key || event.name || 'working....'
         
         if (!activities[sessionKey]) {
@@ -158,6 +164,11 @@
                 time: new Date(),
                 detail: event.detail || ''
             };
+            
+            // Auto-refresh SABnzbd queue when download starts
+            if (event.stage === 'grabbed') {
+                setTimeout(refreshSabQueue, 2000);  // 2 second delay for SABnzbd to register the download
+            }
         }
         
         if (event.release) activity.release = event.release;
@@ -236,7 +247,7 @@
         div.dataset.key = activity.key;
         
         div.innerHTML = `
-            <div class="activity-icon" style="background: ${stageInfo.color}">
+            <div class="activity-icon ${activity.stage}" style="background: ${stageInfo.color}">
                 ${stageInfo.icon}
             </div>
             <div class="activity-content">
@@ -262,6 +273,7 @@
         if (icon) {
             icon.style.background = stageInfo.color;
             icon.textContent = stageInfo.icon;
+            icon.className = `activity-icon ${activity.stage}`;
         }
         
         const title = element.querySelector('.activity-title');
@@ -309,7 +321,7 @@
     
     // ===== SABnzbd Queue Monitor =====
     let sabPollInterval = null;
-    const SAB_POLL_RATE = 4000; 
+    const SAB_POLL_RATE = 2000;
 
     function refreshSabQueue() {
         fetch('/api/sabnzbd/queue')

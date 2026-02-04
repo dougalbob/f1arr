@@ -676,7 +676,7 @@ def search_for_session(
         idx_id = indexer.get('id')
         idx_name = indexer.get('name', 'Unknown')
         
-        for query in queries[:5]:  # Changed from [:3] to [:5]
+        for query in queries[:8]:  # Changed from [:3] to [:5]  and now to 8 to include other aliases and round number "Round 19" queries 
             results = search_indexer(query, idx_id, idx_name)
             
             for release in results:
@@ -698,7 +698,7 @@ def search_for_session(
         calendar=calendar
     )
     
-    return filtered, queries[:5]  # Updated return value
+    return filtered, queries[:8]  # Updated return value - have increased this to 8 queries 
 
 
 def print_search_queries(queries: List[str], verbose: bool = VERBOSE_SEARCH_OUTPUT):
