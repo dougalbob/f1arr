@@ -117,10 +117,52 @@
             });
     }
     
-    function isRoundInFuture(dateStr) {
-        if (!dateStr) return false;
-        const raceDate = new Date(dateStr);
-        return raceDate > today;
+    function isRoundInFuture(roundData) {
+        if (!roundData.date) return false;
+        
+        const raceDate = new Date(roundData.date);
+        const now = new Date();
+        
+        // Reset time components for date-only comparison
+        const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const raceDateOnly = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
+        
+        // Calculate weekend start (Friday, typically 2 days before race)
+        let weekendStart;
+        if (roundData.weekend_start) {
+            const ws = new Date(roundData.weekend_start);
+            weekendStart = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        } else {
+            weekendStart = new Date(raceDateOnly);
+            weekendStart.setDate(weekendStart.getDate() - 2);
+        }
+        
+        // Round is "future" only if weekend hasn't started yet
+        return todayDate < weekendStart;
+    }
+    
+    function isRoundLive(roundData) {
+        if (!roundData.date) return false;
+        
+        const raceDate = new Date(roundData.date);
+        const now = new Date();
+        
+        // Reset time components for date-only comparison
+        const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const raceDateOnly = new Date(raceDate.getFullYear(), raceDate.getMonth(), raceDate.getDate());
+        
+        // Calculate weekend start
+        let weekendStart;
+        if (roundData.weekend_start) {
+            const ws = new Date(roundData.weekend_start);
+            weekendStart = new Date(ws.getFullYear(), ws.getMonth(), ws.getDate());
+        } else {
+            weekendStart = new Date(raceDateOnly);
+            weekendStart.setDate(weekendStart.getDate() - 2);
+        }
+        
+        // Round is "live" if we're within the race weekend (Friday through Sunday)
+        return todayDate >= weekendStart && todayDate <= raceDateOnly;
     }
     
     function renderLibraryStatus(data, season) {
@@ -165,17 +207,23 @@
             const flag = (flagData[season] && flagData[season][round.number]) || '';
             const formattedDate = formatDate(round.date);
             const sprintBadge = round.sprint_weekend ? '<span class="sprint-badge">SPRINT</span>' : '';
-            const isFuture = isRoundInFuture(round.date);
+            
+            // Use the new functions that account for race weekend
+            const isFuture = isRoundInFuture(round);
+            const isLive = isRoundLive(round);
             const futureClass = isFuture ? 'future-round' : '';
+            const liveClass = isLive ? 'live-round' : '';
+            const liveBadge = isLive ? '<span class="live-badge">LIVE</span>' : '';
+            const statusText = isFuture ? ' (upcoming)' : (isLive ? ' (live)' : '');
             
             html += `
-                <div class="library-round ${isComplete ? 'complete' : ''} ${futureClass}" data-round="${round.number}">
+                <div class="library-round ${isComplete ? 'complete' : ''} ${futureClass} ${liveClass}" data-round="${round.number}">
                     <div class="library-round-header" onclick="toggleRoundDetails(this)">
                         <div class="round-header-left">
                             ${flag ? `<img src="/flags/${flag}" class="round-flag-small" alt="">` : ''}
                             <div class="round-header-text">
-                                <span class="library-round-title ${isFuture ? 'dimmed' : ''}">Round ${round.number} - ${round.venue} ${sprintBadge}</span>
-                                <span class="library-round-date">${formattedDate}${isFuture ? ' (upcoming)' : ''}</span>
+                                <span class="library-round-title ${isFuture ? 'dimmed' : ''}">Round ${round.number} - ${round.venue} ${sprintBadge} ${liveBadge}</span>
+                                <span class="library-round-date">${formattedDate}${statusText}</span>
                             </div>
                         </div>
                         <div class="round-header-right">
@@ -197,6 +245,8 @@
                 if (session.exists) {
                     html += `<div class="library-session exists">✅ ${session.name}</div>`;
                 } else {
+                    // Only disable checkboxes for future rounds, not live rounds
+                    const isDisabled = isFuture ? 'disabled' : '';
                     html += `
                         <div class="library-session missing">
                             <label class="session-checkbox-label">
@@ -207,7 +257,7 @@
                                        data-session="${session.type}"
                                        data-name="${session.name}"
                                        onchange="toggleSession(this)"
-                                       ${isFuture ? 'disabled' : ''}>
+                                       ${isDisabled}>
                                 <span class="checkbox-custom"></span>
                                 <span class="session-name">❌ ${session.name}</span>
                             </label>

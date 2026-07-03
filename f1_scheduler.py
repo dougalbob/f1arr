@@ -42,9 +42,9 @@ from f1_watcher import DownloadWatcher, create_watcher
 
 CONFIG = {
     "season": 2026,
-    "race_weekend_interval_minutes": 60,
+    "race_weekend_interval_minutes": 30,
     "off_weekend_interval_minutes": 360,
-    "search_delay_hours": 4,
+    "search_delay_hours": 1,
     "post_race_check_days": 2,
     "watch_dir": get_downloads_path(),
     "watch_stable_seconds": 30,

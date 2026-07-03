@@ -29,7 +29,7 @@ from f1_common import (
     SESSION_BY_NAME,
     CORE_SESSIONS,
     SPRINT_SESSIONS,
-    get_desired_sessions,  # ADD THIS
+    get_desired_sessions,
     classify_session,
     load_calendar,
     get_round_by_number,
@@ -44,12 +44,14 @@ from f1_common import (
     extract_release_group,
     get_valid_sessions_for_round,
     is_sprint_weekend,
+    get_excluded_sessions_for_round,
     get_config_dir,
     F1_LIBRARY_PATH,
     get_prowlarr_url,
     get_prowlarr_api_key,
     get_sabnzbd_url,
     get_sabnzbd_api_key,
+    SESSION_TO_CALENDAR_KEY,
 )
 
 #===============================================================================
@@ -89,14 +91,16 @@ MAX_GRABS_PER_RUN = 6
 
 # --- Quality & Release Group Filters ---
 REQUIRED_QUALITY = "1080p"
-ALLOWED_GROUPS = ["VERUM", "MWR", "DARKSPORT"]
+ALLOWED_GROUPS = ["VERUM", "MWR", "DARKSPORT", "BILLIE"]
 
 # --- Default Search Delay (hours after session ends) ---
-DEFAULT_SEARCH_DELAY_HOURS = 4
+DEFAULT_SEARCH_DELAY_HOURS = 1
 
 # --- Current Season (for scheduled mode) ---
 CURRENT_SEASON = 2026
 
+# --- Sessions that have calendar times (trackside sessions only) ---
+SCHEDULABLE_SESSIONS = set(SESSION_TO_CALENDAR_KEY.keys())
 
 # --- Session Key Mapping (calendar key -> SessionType) ---
 SESSION_KEY_MAP = {
@@ -110,7 +114,7 @@ SESSION_KEY_MAP = {
 }
 
 # --- Reverse mapping for building calendar keys ---
-SESSION_TO_CALENDAR_KEY = {v: k for k, v in SESSION_KEY_MAP.items()}
+SESSION_TO_CAL_KEY = {v: k for k, v in SESSION_KEY_MAP.items()}
 
 #===============================================================================
 # STATE MANAGEMENT
@@ -288,7 +292,9 @@ def get_session_end_time(round_info: dict, session_type: SessionType) -> Optiona
     """
     calendar_key = SESSION_TO_CALENDAR_KEY.get(session_type)
     if not calendar_key:
-        logger.debug(f"No calendar key for {session_type.display_name}")
+        # Only log for schedulable sessions that are missing keys
+        if session_type in SCHEDULABLE_SESSIONS:
+            logger.debug(f"No calendar key for {session_type.display_name}")
         return None
     
     day_mapping = {
@@ -311,26 +317,85 @@ def get_session_end_time(round_info: dict, session_type: SessionType) -> Optiona
 def get_sessions_ready_for_search(calendar: dict, search_delay_hours: int = None) -> List[dict]:
     """
     Find sessions that have finished and are ready to be searched.
+    Only considers the current race weekend and schedulable sessions.
     """
     ready_sessions = []
     now = datetime.now()
+    today = now.date()
+    
+    logger.debug(f"Checking for ready sessions. Current time: {now}, Today: {today}")
+    logger.debug(f"Schedulable sessions: {[s.display_name for s in SCHEDULABLE_SESSIONS]}")
+    
+    rounds_checked = 0
+    rounds_in_window = 0
     
     for round_info in calendar.get("rounds", []):
         round_num = round_info.get("round", 0)
-        delay = search_delay_hours or round_info.get("search_delay_hours", DEFAULT_SEARCH_DELAY_HOURS)
+        venue = round_info.get("venue", "Unknown")
+        rounds_checked += 1
         
-        for session_type, wanted in get_desired_sessions().items():
-            if not wanted:
+        # Only consider current race weekend
+        race_date_str = round_info.get("date")
+        weekend_start_str = round_info.get("weekend_start")
+        
+        if not race_date_str:
+            logger.debug(f"Round {round_num} {venue}: No race date, skipping")
+            continue
+            
+        try:
+            race_date = datetime.strptime(race_date_str, "%Y-%m-%d").date()
+            if weekend_start_str:
+                weekend_start = datetime.strptime(weekend_start_str, "%Y-%m-%d").date()
+            else:
+                weekend_start = race_date - timedelta(days=2)
+            
+            # Only process rounds within the active window
+            # From 1 day before weekend start to 2 days after race
+            window_start = weekend_start - timedelta(days=1)
+            window_end = race_date + timedelta(days=2)
+            
+            if not (window_start <= today <= window_end):
+                logger.debug(f"Round {round_num} {venue}: Outside window ({window_start} to {window_end}), skipping")
+                continue
+            
+            rounds_in_window += 1
+            logger.info(f"📅 Round {round_num} {venue} is within active window ({window_start} to {window_end})")
+                
+        except ValueError as e:
+            logger.debug(f"Round {round_num}: Date parse error: {e}")
+            continue
+        
+        delay = search_delay_hours or round_info.get("search_delay_hours", DEFAULT_SEARCH_DELAY_HOURS)
+        logger.debug(f"Round {round_num} {venue}: Using search delay of {delay} hours")
+        
+        # Only iterate over sessions that have calendar times
+        desired = get_desired_sessions()
+        excluded = get_excluded_sessions_for_round(round_info)
+        
+        logger.debug(f"Round {round_num} {venue}: Excluded sessions: {[s.display_name for s in excluded]}")
+        
+        for session_type in SCHEDULABLE_SESSIONS:
+            if not desired.get(session_type, False):
+                logger.debug(f"  {session_type.display_name}: Not in desired sessions, skipping")
+                continue
+            
+            # Skip sessions not valid for this round type (sprint vs regular)
+            if session_type in excluded:
+                logger.debug(f"  {session_type.display_name}: Excluded for this round type, skipping")
                 continue
             
             end_time = get_session_end_time(round_info, session_type)
             
             if not end_time:
+                logger.debug(f"  {session_type.display_name}: Could not determine end time, skipping")
                 continue
             
             search_after = end_time + timedelta(hours=delay)
             
+            logger.debug(f"  {session_type.display_name}: Ended {end_time}, search after {search_after}, now {now}")
+            
             if now >= search_after:
+                logger.info(f"  ✅ {session_type.display_name}: READY for search (ended {end_time})")
                 ready_sessions.append({
                     "round": round_num,
                     "round_info": round_info,
@@ -338,6 +403,11 @@ def get_sessions_ready_for_search(calendar: dict, search_delay_hours: int = None
                     "ended_at": end_time,
                     "search_after": search_after,
                 })
+            else:
+                time_until = search_after - now
+                logger.debug(f"  {session_type.display_name}: Not ready yet, {time_until} until search window")
+    
+    logger.info(f"📊 Checked {rounds_checked} rounds, {rounds_in_window} in active window, {len(ready_sessions)} sessions ready")
     
     return ready_sessions
 
@@ -352,8 +422,16 @@ def get_upcoming_sessions(calendar: dict, hours_ahead: int = 48) -> List[dict]:
         round_num = round_info.get("round", 0)
         venue = round_info.get("venue", "Unknown")
         
-        for session_type, wanted in get_desired_sessions().items():
-            if not wanted:
+        # Only iterate over sessions that have calendar times
+        desired = get_desired_sessions()
+        excluded = get_excluded_sessions_for_round(round_info)
+        
+        for session_type in SCHEDULABLE_SESSIONS:
+            if not desired.get(session_type, False):
+                continue
+            
+            # Skip sessions not valid for this round type (sprint vs regular)
+            if session_type in excluded:
                 continue
             
             end_time = get_session_end_time(round_info, session_type)
@@ -408,6 +486,8 @@ def scan_library_for_season(season: int) -> Dict[int, Set[SessionType]]:
     existing = {}
     year_short = season % 100
     
+    logger.debug(f"Scanning library: {season_path}")
+    
     for round_folder in os.listdir(season_path):
         round_path = os.path.join(season_path, round_folder)
         
@@ -433,7 +513,10 @@ def scan_library_for_season(season: int) -> Dict[int, Set[SessionType]]:
                 
                 if folder_year == season and folder_round == round_num:
                     existing[round_num].add(session_type)
-                    logger.debug(f"Found: Round {round_num} - {session_type.display_name}")
+                    logger.debug(f"Library: Round {round_num} has {session_type.display_name}")
+    
+    total_sessions = sum(len(s) for s in existing.values())
+    logger.info(f"📚 Library scan: Found {total_sessions} sessions across {len(existing)} rounds")
     
     return existing
 
@@ -676,7 +759,7 @@ def search_for_session(
         idx_id = indexer.get('id')
         idx_name = indexer.get('name', 'Unknown')
         
-        for query in queries[:8]:  # Changed from [:3] to [:5]  and now to 8 to include other aliases and round number "Round 19" queries 
+        for query in queries[:8]:
             results = search_indexer(query, idx_id, idx_name)
             
             for release in results:
@@ -698,7 +781,9 @@ def search_for_session(
         calendar=calendar
     )
     
-    return filtered, queries[:8]  # Updated return value - have increased this to 8 queries 
+    logger.info(f"🎯 After filtering: {len(filtered)} matching releases")
+    
+    return filtered, queries[:8]
 
 
 def print_search_queries(queries: List[str], verbose: bool = VERBOSE_SEARCH_OUTPUT):
@@ -1146,6 +1231,11 @@ def cmd_scheduled(args):
     season = args.season or CURRENT_SEASON
     dry_run = args.dry_run
     force = args.force
+    search_delay = getattr(args, 'search_delay', None)
+    
+    logger.info(f"Starting scheduled check for season {season}")
+    if search_delay:
+        logger.info(f"Using search delay override: {search_delay} hours")
     
     print(f"\n{'=' * 60}")
     print(f"  FORMULA 1 GRABBER - SCHEDULED MODE")
@@ -1153,57 +1243,83 @@ def cmd_scheduled(args):
     print(f"\n  Season:       {season}")
     print(f"  Dry Run:      {dry_run}")
     print(f"  Max Grabs:    {MAX_GRABS_PER_RUN}")
-    print(f"  Search Delay: {DEFAULT_SEARCH_DELAY_HOURS} hours")
+    print(f"  Search Delay: {search_delay or DEFAULT_SEARCH_DELAY_HOURS} hours")
     print(f"  Verbose:      {VERBOSE_SEARCH_OUTPUT}")
-    print(f"  Time (GMT):   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Time (Local): {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     state = GrabberState()
     
     calendar = load_calendar(season)
     if not calendar:
         print(f"\n❌ Could not load calendar for {season}")
+        logger.error(f"Could not load calendar for {season}")
         return 1
     
     if not has_session_times(calendar):
         print(f"\n❌ Calendar for {season} doesn't have session times")
         print("   Scheduled mode requires the 2026+ calendar format")
         print("   Use 'backfill' mode for older seasons")
+        logger.error(f"Calendar for {season} doesn't have session times")
         return 1
     
     print(f"\n  Calendar: {len(calendar.get('rounds', []))} rounds with session times")
+    logger.info(f"Loaded calendar with {len(calendar.get('rounds', []))} rounds")
     
+    # Show upcoming sessions
     upcoming = get_upcoming_sessions(calendar, hours_ahead=48)
     print_upcoming_sessions(upcoming)
     
-    ready = get_sessions_ready_for_search(calendar)
+    # Get sessions ready for search
+    logger.info("Checking for sessions ready to search...")
+    ready = get_sessions_ready_for_search(calendar, search_delay_hours=search_delay)
     
+    logger.info(f"get_sessions_ready_for_search returned {len(ready)} sessions")
+    for r in ready:
+        logger.info(f"  Ready: Round {r['round']} {r['round_info'].get('venue', '?')} - {r['session_type'].display_name}")
+    
+    # Scan library for existing sessions
+    logger.info("Scanning library for existing sessions...")
     existing = scan_library_for_season(season)
     
+    # Filter out sessions already in library or already grabbed
     filtered_ready = []
     for item in ready:
         round_num = item['round']
         session_type = item['session_type']
+        venue = item['round_info'].get('venue', 'Unknown')
         
+        # Skip if already in library
         if round_num in existing and session_type in existing[round_num]:
-            logger.debug(f"Skipping {session_type.display_name}: already in library")
+            logger.info(f"Skipping Round {round_num} {venue} {session_type.display_name}: already in library")
             continue
         
         session_key = state.make_session_key(season, round_num, session_type)
         
+        # Skip if already grabbed (sent to downloader)
         if state.was_grabbed(session_key):
-            logger.debug(f"Skipping {session_key}: already grabbed")
+            logger.info(f"Skipping {session_key}: already grabbed (in state)")
             continue
         
-        if not force and state.was_searched(session_key, max_age_days=1):
-            logger.debug(f"Skipping {session_key}: recently searched")
-            continue
+        # Rate limit: don't search same session more than once per 30 minutes
+        # (unless --force is used)
+        if not force and session_key in state.state.get("searched", {}):
+            try:
+                searched_time = datetime.fromisoformat(state.state["searched"][session_key])
+                minutes_since = (datetime.now() - searched_time).total_seconds() / 60
+                if minutes_since < 30:
+                    logger.debug(f"Skipping {session_key}: searched {int(minutes_since)}m ago (rate limit)")
+                    continue
+            except (ValueError, KeyError):
+                pass  # Invalid timestamp, proceed with search
         
+        logger.info(f"Will search for: Round {round_num} {venue} - {session_type.display_name}")
         filtered_ready.append(item)
     
     print_ready_sessions(filtered_ready)
     
     if not filtered_ready:
         print("\n  ℹ️  No new sessions to search for")
+        logger.info("No new sessions to search for")
         state.update_scheduled_check()
         state.save()
         return 0
@@ -1216,11 +1332,14 @@ def cmd_scheduled(args):
         indexers = get_indexers()
         if indexers:
             print(f"  ✅ Prowlarr: {len(indexers)} indexers")
+            logger.info(f"Prowlarr connected: {len(indexers)} indexers")
         else:
             print("  ❌ Prowlarr: No indexers found")
+            logger.error("Prowlarr: No indexers found")
             return 1
     except Exception as e:
         print(f"  ❌ Prowlarr: {e}")
+        logger.error(f"Prowlarr connection failed: {e}")
         return 1
     
     if not dry_run:
@@ -1252,6 +1371,8 @@ def cmd_scheduled(args):
         print(f"\n  🔍 Round {round_num} {venue}: {session_type.display_name}")
         print(f"      Session ended: {ended_ago}")
         
+        logger.info(f"Searching for Round {round_num} {venue} - {session_type.display_name}")
+        
         results, queries_used = search_for_session(
             round_info, session_type, season, indexers, calendar
         )
@@ -1262,7 +1383,7 @@ def cmd_scheduled(args):
         
         if not results:
             print("    ❌ No matching releases found yet")
-            logger.info(f"❌ No candidates: Round {round_num} {venue} - {session_type.display_name}")
+            logger.info(f"No matching releases for Round {round_num} {venue} - {session_type.display_name}")
             state.mark_failed(session_key, "No results")
             continue
         
@@ -1307,6 +1428,117 @@ def cmd_scheduled(args):
         print(f"                Round {next_session['round']} {next_session['venue']} in {next_time}")
     
     print(f"{'=' * 60}\n")
+    
+    logger.info(f"Scheduled check complete: {grabs_this_run} grabbed")
+    
+    return 0
+    
+    print(f"\n{'─' * 40}")
+    print("CONNECTION TESTS")
+    print(f"{'─' * 40}")
+    
+    try:
+        indexers = get_indexers()
+        if indexers:
+            print(f"  ✅ Prowlarr: {len(indexers)} indexers")
+            logger.info(f"Prowlarr connected: {len(indexers)} indexers")
+        else:
+            print("  ❌ Prowlarr: No indexers found")
+            logger.error("Prowlarr: No indexers found")
+            return 1
+    except Exception as e:
+        print(f"  ❌ Prowlarr: {e}")
+        logger.error(f"Prowlarr connection failed: {e}")
+        return 1
+    
+    if not dry_run:
+        if not test_sabnzbd_connection():
+            print("  ❌ SABnzbd: Connection failed")
+            return 1
+    else:
+        print("  ⏭️  SABnzbd: Skipped (dry run)")
+    
+    print(f"\n{'─' * 40}")
+    print(f"SEARCHING & GRABBING (Season {season})")
+    print(f"{'─' * 40}")
+    
+    grabs_this_run = 0
+    
+    for item in filtered_ready:
+        if grabs_this_run >= MAX_GRABS_PER_RUN:
+            print(f"\n  ⚠️  Reached max grabs limit ({MAX_GRABS_PER_RUN})")
+            break
+        
+        round_num = item['round']
+        round_info = item['round_info']
+        session_type = item['session_type']
+        venue = round_info.get('venue', 'Unknown')
+        
+        session_key = state.make_session_key(season, round_num, session_type)
+        
+        ended_ago = format_time_ago(item['ended_at'])
+        print(f"\n  🔍 Round {round_num} {venue}: {session_type.display_name}")
+        print(f"      Session ended: {ended_ago}")
+        
+        logger.info(f"Searching for Round {round_num} {venue} - {session_type.display_name}")
+        
+        results, queries_used = search_for_session(
+            round_info, session_type, season, indexers, calendar
+        )
+        
+        print_search_queries(queries_used)
+        
+        state.mark_searched(session_key)
+        
+        if not results:
+            print("    ❌ No matching releases found yet")
+            logger.info(f"No matching releases for Round {round_num} {venue} - {session_type.display_name}")
+            state.mark_failed(session_key, "No results")
+            continue
+        
+        print(f"    Found {len(results)} matching releases:")
+        print_search_results(results, limit=3)
+        
+        best = results[0]
+        
+        session_info = {
+            'season': season,
+            'round': round_num,
+            'session_type': session_type,
+            'venue': venue,
+        }
+        
+        if dry_run:
+            prefix = build_prefix(season, round_num, session_type)
+            print(f"\n    [DRY-RUN] Would grab as: {prefix} {venue} {session_type.display_name}")
+            grabs_this_run += 1
+        else:
+            print(f"\n    ⬇️  Grabbing: {best.get('title', 'Unknown')[:50]}")
+            
+            if grab_release(best, session_info):
+                state.mark_grabbed(session_key, best.get('title', 'Unknown'))
+                grabs_this_run += 1
+            else:
+                state.mark_failed(session_key, "Grab failed")
+    
+    state.update_scheduled_check()
+    state.save()
+    
+    print(f"\n{'=' * 60}")
+    print("SUMMARY")
+    print(f"{'=' * 60}")
+    print(f"  Sessions ready:    {len(filtered_ready)}")
+    print(f"  Releases grabbed:  {grabs_this_run}")
+    
+    if upcoming:
+        next_session = upcoming[0]
+        next_time = format_time_until(next_session['starts_at'])
+        print(f"\n  Next session: {next_session['session_type'].display_name}")
+        print(f"                Round {next_session['round']} {next_session['venue']} in {next_time}")
+    
+    print(f"{'=' * 60}\n")
+    
+    logger.info(f"Scheduled check complete: {grabs_this_run} grabbed")
     
     return 0
 

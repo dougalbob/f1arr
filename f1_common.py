@@ -526,6 +526,11 @@ def classify_session(text: str) -> SessionType:
     normalized = re.sub(r'[.\-_]+', ' ', normalized)
     normalized = re.sub(r'\s+', ' ', normalized).strip()
     
+    # Global exclusions - reject junior series and other non-F1 content
+    global_exclusions = ["academy", "f2", "formula 2", "f3", "formula 3", "porsche supercup"]
+    if any(exclusion in normalized for exclusion in global_exclusions):
+        return SessionType.UNKNOWN
+    
     sorted_patterns = sorted(SESSION_PATTERNS, key=lambda p: p.priority, reverse=True)
     
     for pattern in sorted_patterns:
@@ -704,7 +709,7 @@ def filter_releases(
     calendar: dict = None
 ) -> List[dict]:
     if allowed_groups is None:
-        allowed_groups = ["VERUM", "MWR", "DARKSPORT"]
+        allowed_groups = ["VERUM", "MWR", "DARKSPORT", "BILLIE", "playWEB"]
     allowed_groups_upper = [g.upper() for g in allowed_groups]
     
     venue = round_info.get("venue", "").lower()
@@ -740,6 +745,10 @@ def filter_releases(
             score += 20
         elif info.group == "DARKSPORT":
             score += 5
+        elif info.group == "BILLIE":
+            score += 10
+        elif info.group == "PLAYWEB":
+            score += 10
         if round_match:
             score += 10
         if target_session == SessionType.RACE_UNCUT:
